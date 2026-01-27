@@ -1,0 +1,74 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Large datasets (download separately)
+DIV2K.tar
+data/raw/div2k/
+data/raw/bossbase/
+
+# Preprocessed outputs (regenerate from pipeline)
+preprocessed/I_channel/*.npy
+preprocessed/rgb_256/*.png
+preprocessed/metadata/*.json
+
+# Scrambled watermarks (regenerate from pipeline)
+data/scrambled/*.npy
+data/scrambled/*.png
+
+# Test outputs
+test_output/
+*.test.py
+temp/
+tmp/
+
+# Jupyter Notebooks checkpoints
+.ipynb_checkpoints/
+
+# Environment variables
+.env
+.env.local
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Git
+*.orig
