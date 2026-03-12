@@ -10,6 +10,7 @@ This script:
 6. Creates train/val/test splits
 """
 import logging
+import json
 from pathlib import Path
 from typing import List
 import cv2
@@ -60,6 +61,7 @@ def setup_directories(base_dir: Path) -> dict:
         'preprocessed_i_channel': base_dir / 'preprocessed' / 'I_channel',
         'preprocessed_embedded_i_channel': base_dir / 'preprocessed' / 'embedded_I_channel',
         'preprocessed_embedded_preview': base_dir / 'preprocessed' / 'embedded_preview',
+        'preprocessed_process_collage': base_dir / 'preprocessed' / 'process_collage',
         'preprocessed_metadata': base_dir / 'preprocessed' / 'metadata',
         'splits': base_dir / 'splits'
     }
@@ -119,6 +121,96 @@ def generate_image_id(image_path: Path, counter: int) -> str:
     # Use stem (filename without extension) and add counter for uniqueness
     base_name = image_path.stem
     return f"{base_name}_{counter:05d}"
+
+
+def yiq_to_bgr(yiq_image: np.ndarray) -> np.ndarray:
+    """
+    Convert YIQ image to BGR image using inverse NTSC transform.
+
+    Args:
+        yiq_image: Input image in YIQ format
+
+    Returns:
+        BGR uint8 image in [0, 255]
+    """
+    y = yiq_image[:, :, 0].astype(np.float32)
+    i = yiq_image[:, :, 1].astype(np.float32)
+    q = yiq_image[:, :, 2].astype(np.float32)
+
+    r = y + 0.956 * i + 0.621 * q
+    g = y - 0.272 * i - 0.647 * q
+    b = y - 1.106 * i + 1.703 * q
+
+    bgr = np.stack([b, g, r], axis=2)
+    return np.clip(bgr, 0, 255).astype(np.uint8)
+
+
+def to_u8_grayscale(image: np.ndarray) -> np.ndarray:
+    """
+    Convert a grayscale-like array to uint8 in [0, 255].
+    """
+    img = image.astype(np.float32)
+    if img.max() > 1.0 or img.min() < 0.0:
+        img = (img - img.min()) / (img.max() - img.min() + 1e-8)
+    return np.clip(img * 255.0, 0, 255).astype(np.uint8)
+
+
+def create_process_collage(
+    original_bgr: np.ndarray,
+    watermark_binary: np.ndarray,
+    watermark_catalan: np.ndarray,
+    watermark_mosaic: np.ndarray,
+    embedded_bgr: np.ndarray,
+) -> np.ndarray:
+    """
+    Create a 6-panel process collage for one host image.
+    """
+    wm_binary_u8 = to_u8_grayscale(watermark_binary)
+    wm_catalan_u8 = to_u8_grayscale(watermark_catalan)
+    wm_mosaic_u8 = to_u8_grayscale(watermark_mosaic)
+
+    wm_binary_panel = cv2.cvtColor(
+        cv2.resize(wm_binary_u8, (256, 256), interpolation=cv2.INTER_NEAREST),
+        cv2.COLOR_GRAY2BGR,
+    )
+    wm_catalan_panel = cv2.cvtColor(
+        cv2.resize(wm_catalan_u8, (256, 256), interpolation=cv2.INTER_NEAREST),
+        cv2.COLOR_GRAY2BGR,
+    )
+    wm_mosaic_panel = cv2.cvtColor(wm_mosaic_u8, cv2.COLOR_GRAY2BGR)
+
+    diff = np.abs(embedded_bgr.astype(np.float32) - original_bgr.astype(np.float32))
+    diff_mag = diff.mean(axis=2)
+    diff_vis = np.clip(diff_mag * 8.0, 0, 255).astype(np.uint8)
+    diff_heatmap = cv2.applyColorMap(diff_vis, cv2.COLORMAP_TURBO)
+
+    panels = [
+        ("Original Image", original_bgr),
+        ("Watermark", wm_binary_panel),
+        ("Catalan Transform", wm_catalan_panel),
+        ("Mosaic Generation", wm_mosaic_panel),
+        ("Embedded Image", embedded_bgr),
+        ("Change Map", diff_heatmap),
+    ]
+
+    cols = 3
+    rows = 2
+    cell_w = 256
+    cell_h = 256
+    title_h = 30
+    canvas = np.full((rows * (cell_h + title_h), cols * cell_w, 3), 245, dtype=np.uint8)
+
+    for idx, (title, panel) in enumerate(panels):
+        r = idx // cols
+        c = idx % cols
+        x0 = c * cell_w
+        y0 = r * (cell_h + title_h)
+
+        panel_resized = cv2.resize(panel, (cell_w, cell_h), interpolation=cv2.INTER_AREA)
+        canvas[y0 + title_h:y0 + title_h + cell_h, x0:x0 + cell_w] = panel_resized
+        cv2.putText(canvas, title, (x0 + 8, y0 + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (25, 25, 25), 1, cv2.LINE_AA)
+
+    return canvas
 
 
 def main():
@@ -275,6 +367,7 @@ def main():
     embedding_alpha = 0.08
 
     watermark_scrambled = None
+    watermark_binary = None
     watermark_id = None
 
     # Step 1: Load watermark image
@@ -301,6 +394,7 @@ def main():
             if watermark_original is None:
                 logging.error(f"Failed to load watermark image: {watermark_path}")
             else:
+                watermark_binary = watermark_original
                 logging.info(f"Loaded watermark: {watermark_original.shape}")
 
                 logging.info("\n" + "="*80)
@@ -456,7 +550,48 @@ def main():
                 np.save(embedded_output_path, embedded_i)
 
                 preview_output_path = dirs['preprocessed_embedded_preview'] / f"{image_id}.png"
-                cv2.imwrite(str(preview_output_path), (embedded_i * 255).astype(np.uint8))
+
+                # Reconstruct a color preview by combining embedded I with original Y and Q.
+                rgb_input_path = dirs['preprocessed_rgb'] / f"{image_id}.png"
+                metadata_input_path = dirs['preprocessed_metadata'] / f"{image_id}.json"
+                preview_written = False
+
+                if rgb_input_path.exists() and metadata_input_path.exists():
+                    original_bgr = cv2.imread(str(rgb_input_path), cv2.IMREAD_COLOR)
+                    if original_bgr is not None:
+                        with open(metadata_input_path, 'r') as f:
+                            image_metadata = json.load(f)
+
+                        i_min = float(image_metadata['i_channel_min'])
+                        i_max = float(image_metadata['i_channel_max'])
+                        i_denormalized = embedded_i * (i_max - i_min + 1e-8) + i_min
+
+                        yiq_original = loader.rgb_to_yiq(original_bgr)
+                        yiq_embedded = yiq_original.copy()
+                        yiq_embedded[:, :, 1] = i_denormalized
+
+                        embedded_bgr_preview = yiq_to_bgr(yiq_embedded)
+                        cv2.imwrite(str(preview_output_path), embedded_bgr_preview)
+
+                        if watermark_binary is not None and watermark_catalan is not None and watermark_mosaic is not None:
+                            collage_image = create_process_collage(
+                                original_bgr=original_bgr,
+                                watermark_binary=watermark_binary,
+                                watermark_catalan=watermark_catalan,
+                                watermark_mosaic=watermark_mosaic,
+                                embedded_bgr=embedded_bgr_preview,
+                            )
+                            collage_output_path = dirs['preprocessed_process_collage'] / f"{image_id}.png"
+                            cv2.imwrite(str(collage_output_path), collage_image)
+
+                        preview_written = True
+
+                if not preview_written:
+                    logging.warning(
+                        "Falling back to grayscale preview for %s due to missing inputs",
+                        image_id,
+                    )
+                    cv2.imwrite(str(preview_output_path), (embedded_i * 255).astype(np.uint8))
 
                 metadata_mgr.save_embedding_metadata(
                     image_id=image_id,

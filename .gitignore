@@ -59,6 +59,13 @@ data/mosaic/*.npy
 data/mosaic/*.png
 preprocessed/embedded_I_channel/*.npy
 preprocessed/embedded_preview/*.png
+preprocessed/process_collage/*.png
+
+# Keep preview folders visible with exactly one tracked sample image each
+!preprocessed/embedded_preview/.gitkeep
+!preprocessed/embedded_preview/0001_00000.png
+!preprocessed/process_collage/.gitkeep
+!preprocessed/process_collage/0001_00000.png
 
 # Pipeline helper outputs
 failed_images.txt

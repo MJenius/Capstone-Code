@@ -27,6 +27,8 @@ A modular watermarking system implementing Arnold Cat Map (ACM) scrambling for s
 - 8x8 tiling of transformed 32x32 watermark to 256x256 mosaic
 - Additive embedding into normalized I-channel
 - Embedded output saving (`preprocessed/embedded_I_channel/`)
+- Color embedded preview generation (`preprocessed/embedded_preview/`)
+- Per-image process collage generation (`preprocessed/process_collage/`)
 - Per-image embedding metadata (`preprocessed/metadata/embedding_*.json`)
 
 ## Project Structure
@@ -42,7 +44,8 @@ Code/
 ├── preprocessed/           # Processed data (generated)
 │   ├── I_channel/          # Extracted I-channel data
 │   ├── embedded_I_channel/ # Embedded I-channel outputs
-│   ├── embedded_preview/   # Embedded PNG previews
+│   ├── embedded_preview/   # Embedded color PNG previews
+│   ├── process_collage/    # Per-image 6-panel process visualizations
 │   ├── rgb_256/            # Resized RGB images
 │   └── metadata/           # Processing metadata
 ├── splits/                 # Train/val/test splits

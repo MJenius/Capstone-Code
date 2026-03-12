@@ -10,6 +10,8 @@ def main() -> bool:
     i_dir = Path('preprocessed/I_channel')
     metadata_dir = Path('preprocessed/metadata')
     embedded_dir = Path('preprocessed/embedded_I_channel')
+    embedded_preview_dir = Path('preprocessed/embedded_preview')
+    process_collage_dir = Path('preprocessed/process_collage')
 
     rgb_files = sorted(rgb_dir.glob('*.png'))
     if not rgb_files:
@@ -70,6 +72,38 @@ def main() -> bool:
         if float(embedded_i.min()) < 0.0 or float(embedded_i.max()) > 1.0:
             print('Embedded I-channel out of normalized bounds [0,1]')
             return False
+
+        preview_path = embedded_preview_dir / f'{image_id}.png'
+        if not preview_path.exists():
+            print(f"Missing embedded preview: {preview_path}")
+            return False
+
+        preview_img = cv2.imread(str(preview_path), cv2.IMREAD_COLOR)
+        if preview_img is None:
+            print(f"Failed to read embedded preview: {preview_path}")
+            return False
+
+        if preview_img.ndim != 3 or preview_img.shape[2] != 3:
+            print('Embedded preview is not a 3-channel color image')
+            return False
+
+        print(f"Embedded preview shape: {preview_img.shape}")
+
+        collage_path = process_collage_dir / f'{image_id}.png'
+        if not collage_path.exists():
+            print(f"Missing process collage: {collage_path}")
+            return False
+
+        collage_img = cv2.imread(str(collage_path), cv2.IMREAD_COLOR)
+        if collage_img is None:
+            print(f"Failed to read process collage: {collage_path}")
+            return False
+
+        if collage_img.ndim != 3 or collage_img.shape[2] != 3:
+            print('Process collage is not a 3-channel color image')
+            return False
+
+        print(f"Process collage shape: {collage_img.shape}")
 
         embedding_metadata_path = metadata_dir / f'embedding_{image_id}.json'
         if not embedding_metadata_path.exists():
