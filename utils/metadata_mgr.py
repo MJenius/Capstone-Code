@@ -123,6 +123,50 @@ class MetadataManager:
             logging.error(f"Error saving watermark metadata for {watermark_id}: {str(e)}")
             return False
 
+    def save_embedding_metadata(
+        self,
+        image_id: str,
+        watermark_id: str,
+        embedding_metadata: dict
+    ) -> bool:
+        """
+        Save metadata for an embedded I-channel output.
+
+        Args:
+            image_id: Unique identifier for the host image
+            watermark_id: Unique identifier for the watermark
+            embedding_metadata: Dictionary containing embedding information
+
+        Returns:
+            True if save was successful, False otherwise
+        """
+        try:
+            metadata = {
+                'image_id': image_id,
+                'watermark_id': watermark_id,
+                'acm_iterations': embedding_metadata['acm_iterations'],
+                'catalan_iterations': embedding_metadata['catalan_iterations'],
+                'catalan_key': embedding_metadata['catalan_key'],
+                'mosaic_shape': embedding_metadata['mosaic_shape'],
+                'mosaic_grid': embedding_metadata['mosaic_grid'],
+                'embedding_alpha': embedding_metadata['embedding_alpha'],
+                'embedded_i_path': embedding_metadata['embedded_i_path'],
+                'host_i_min': embedding_metadata['host_i_min'],
+                'host_i_max': embedding_metadata['host_i_max'],
+                'embedded_i_min': embedding_metadata['embedded_i_min'],
+                'embedded_i_max': embedding_metadata['embedded_i_max']
+            }
+
+            output_path = self.metadata_dir / f"embedding_{image_id}.json"
+            with open(output_path, 'w') as f:
+                json.dump(metadata, f, indent=2)
+
+            return True
+
+        except Exception as e:
+            logging.error(f"Error saving embedding metadata for {image_id}: {str(e)}")
+            return False
+
 
 def create_splits(
     all_ids: List[str], 

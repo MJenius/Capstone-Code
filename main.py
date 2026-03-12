@@ -12,6 +12,8 @@ This script:
 import logging
 from pathlib import Path
 from typing import List
+import cv2
+import numpy as np
 from tqdm import tqdm
 
 from utils.downloader import DatasetDownloader
@@ -19,6 +21,9 @@ from utils.loader import ImageLoader
 from utils.processor import ImageProcessor
 from utils.metadata_mgr import MetadataManager, create_splits
 from utils.scrambler import WatermarkScrambler
+from utils.catalan import CatalanTransform
+from utils.mosaic import MosaicGenerator
+from utils.embedder import WatermarkEmbedder
 
 
 # Configure logging
@@ -48,9 +53,13 @@ def setup_directories(base_dir: Path) -> dict:
         'data_raw_bossbase': base_dir / 'data' / 'raw' / 'bossbase',
         'data_watermark': base_dir / 'data' / 'watermark',
         'data_scrambled': base_dir / 'data' / 'scrambled',
+        'data_catalan': base_dir / 'data' / 'catalan',
+        'data_mosaic': base_dir / 'data' / 'mosaic',
         'preprocessed': base_dir / 'preprocessed',
         'preprocessed_rgb': base_dir / 'preprocessed' / 'rgb_256',
         'preprocessed_i_channel': base_dir / 'preprocessed' / 'I_channel',
+        'preprocessed_embedded_i_channel': base_dir / 'preprocessed' / 'embedded_I_channel',
+        'preprocessed_embedded_preview': base_dir / 'preprocessed' / 'embedded_preview',
         'preprocessed_metadata': base_dir / 'preprocessed' / 'metadata',
         'splits': base_dir / 'splits'
     }
@@ -253,133 +262,232 @@ def main():
     # ============================================================================
     # PHASE 2: WATERMARK SCRAMBLING
     # ============================================================================
-    
+
     logging.info("\n\n" + "="*80)
     logging.info("PHASE 2: WATERMARK SCRAMBLING")
     logging.info("="*80)
-    
+
+    # Phase configuration
+    target_watermark_size = 32
+    acm_iterations = 10
+    catalan_iterations = 5
+    catalan_key = 7
+    embedding_alpha = 0.08
+
+    watermark_scrambled = None
+    watermark_id = None
+
     # Step 1: Load watermark image
     logging.info("\n" + "="*80)
     logging.info("Step 1: Loading watermark image")
     logging.info("="*80)
-    
+
     # Check if watermark directory exists and contains images
     watermark_files = list(dirs['data_watermark'].glob('*.png')) + \
                      list(dirs['data_watermark'].glob('*.jpg')) + \
                      list(dirs['data_watermark'].glob('*.bmp'))
-    
+
     if not watermark_files:
         logging.warning(f"No watermark images found in {dirs['data_watermark']}")
         logging.warning("Please add a watermark image to data/watermark/ directory")
-        logging.warning("Skipping Phase 2: Watermark Scrambling")
+        logging.warning("Skipping Phase 2 and later watermark phases")
     else:
-        # Use the first watermark found
         watermark_path = watermark_files[0]
+        watermark_id = watermark_path.stem
         logging.info(f"Found watermark: {watermark_path.name}")
-        
+
         try:
-            # Load watermark image
-            import cv2
-            import numpy as np
-            
             watermark_original = cv2.imread(str(watermark_path), cv2.IMREAD_GRAYSCALE)
-            
             if watermark_original is None:
                 logging.error(f"Failed to load watermark image: {watermark_path}")
             else:
                 logging.info(f"Loaded watermark: {watermark_original.shape}")
-                
-                # Step 2: Initialize scrambler and process watermark
+
                 logging.info("\n" + "="*80)
                 logging.info("Step 2: Scrambling watermark with Arnold Cat Map")
                 logging.info("="*80)
-                
-                # Parameters
-                target_watermark_size = 32  # Standard size for embedding
-                acm_iterations = 10  # Arnold Cat Map iterations (encryption key)
-                
-                # Initialize scrambler
+
                 scrambler = WatermarkScrambler(default_size=target_watermark_size)
-                
-                # Store original dimensions
                 original_watermark_dims = watermark_original.shape
-                
-                # Resize to square
+
                 watermark_resized = scrambler.resize_watermark(
-                    watermark_original, 
+                    watermark_original,
                     target_size=target_watermark_size
                 )
-                
+
                 if watermark_resized is None:
                     logging.error("Failed to resize watermark")
                 else:
-                    logging.info(f"Resized watermark to {watermark_resized.shape}")
-                    
-                    # Scramble watermark
                     watermark_scrambled = scrambler.arnold_cat_map(
                         watermark_resized,
                         iterations=acm_iterations
                     )
-                    
+
                     if watermark_scrambled is None:
                         logging.error("Failed to scramble watermark")
                     else:
-                        # Step 3: Save scrambled watermark
-                        logging.info("\n" + "="*80)
-                        logging.info("Step 3: Saving scrambled watermark")
-                        logging.info("="*80)
-                        
-                        # Generate watermark ID
-                        watermark_id = watermark_path.stem
-                        
-                        # Save as .npy for numerical precision
                         scrambled_filename = f"watermark_scrambled_{acm_iterations}iter.npy"
                         scrambled_save_path = dirs['data_scrambled'] / scrambled_filename
-                        
-                        try:
-                            np.save(scrambled_save_path, watermark_scrambled)
-                            logging.info(f"Saved scrambled watermark: {scrambled_save_path.name}")
-                            
-                            # Step 4: Save watermark metadata
-                            logging.info("\n" + "="*80)
-                            logging.info("Step 4: Saving watermark metadata")
-                            logging.info("="*80)
-                            
-                            scrambling_metadata = {
-                                'algorithm': 'Arnold Cat Map',
-                                'iterations': acm_iterations,
-                                'original_dimensions': list(original_watermark_dims),
-                                'scrambled_size': target_watermark_size,
-                                'scrambled_path': str(scrambled_save_path)
-                            }
-                            
-                            success = metadata_mgr.save_watermark_metadata(
-                                watermark_id=watermark_id,
-                                original_path=watermark_path,
-                                scrambling_metadata=scrambling_metadata
-                            )
-                            
-                            if success:
-                                logging.info("Watermark metadata saved successfully")
-                            else:
-                                logging.error("Failed to save watermark metadata")
-                            
-                            # Summary
-                            logging.info("\n" + "="*80)
-                            logging.info("Phase 2: Watermark Scrambling Summary")
-                            logging.info("="*80)
-                            logging.info(f"Original watermark: {watermark_path.name}")
-                            logging.info(f"Original dimensions: {original_watermark_dims}")
-                            logging.info(f"Scrambled size: {target_watermark_size}x{target_watermark_size}")
-                            logging.info(f"Algorithm: Arnold Cat Map")
-                            logging.info(f"Iterations (key): {acm_iterations}")
-                            logging.info(f"Output: {scrambled_save_path.name}")
-                            
-                        except Exception as e:
-                            logging.error(f"Error saving scrambled watermark: {str(e)}")
-                
+                        np.save(scrambled_save_path, watermark_scrambled)
+                        logging.info(f"Saved scrambled watermark: {scrambled_save_path.name}")
+
+                        scrambling_metadata = {
+                            'algorithm': 'Arnold Cat Map',
+                            'iterations': acm_iterations,
+                            'original_dimensions': list(original_watermark_dims),
+                            'scrambled_size': target_watermark_size,
+                            'scrambled_path': str(scrambled_save_path)
+                        }
+
+                        success = metadata_mgr.save_watermark_metadata(
+                            watermark_id=watermark_id,
+                            original_path=watermark_path,
+                            scrambling_metadata=scrambling_metadata
+                        )
+                        if not success:
+                            logging.error("Failed to save watermark metadata")
+
+                        logging.info("\n" + "="*80)
+                        logging.info("Phase 2: Watermark Scrambling Summary")
+                        logging.info("="*80)
+                        logging.info(f"Original watermark: {watermark_path.name}")
+                        logging.info(f"Original dimensions: {original_watermark_dims}")
+                        logging.info(f"Scrambled size: {target_watermark_size}x{target_watermark_size}")
+                        logging.info(f"Iterations (key): {acm_iterations}")
+                        logging.info(f"Output: {scrambled_save_path.name}")
+
         except Exception as e:
             logging.error(f"Unexpected error in Phase 2: {str(e)}")
+
+    # ============================================================================
+    # PHASE 3: CATALAN TRANSFORM
+    # ============================================================================
+
+    watermark_catalan = None
+    if watermark_scrambled is not None:
+        logging.info("\n\n" + "="*80)
+        logging.info("PHASE 3: CATALAN TRANSFORM")
+        logging.info("="*80)
+
+        catalan_transformer = CatalanTransform()
+        watermark_catalan = catalan_transformer.catalan_transform(
+            watermark_scrambled,
+            iterations=catalan_iterations,
+            key=catalan_key
+        )
+
+        if watermark_catalan is None:
+            logging.error("Phase 3 failed: Catalan transform returned None")
+        else:
+            catalan_filename = f"watermark_catalan_{catalan_iterations}iter_key{catalan_key}.npy"
+            catalan_save_path = dirs['data_catalan'] / catalan_filename
+            np.save(catalan_save_path, watermark_catalan)
+            logging.info(f"Saved Catalan-transformed watermark: {catalan_save_path.name}")
+
+    # ============================================================================
+    # PHASE 4: MOSAIC GENERATION
+    # ============================================================================
+
+    watermark_mosaic = None
+    if watermark_catalan is not None:
+        logging.info("\n\n" + "="*80)
+        logging.info("PHASE 4: MOSAIC GENERATION")
+        logging.info("="*80)
+
+        mosaic_generator = MosaicGenerator()
+        watermark_mosaic = mosaic_generator.create_tiled_mosaic(
+            watermark=watermark_catalan,
+            target_shape=(256, 256)
+        )
+
+        if watermark_mosaic is None:
+            logging.error("Phase 4 failed: Mosaic generation returned None")
+        else:
+            mosaic_filename = "watermark_mosaic_256.npy"
+            mosaic_save_path = dirs['data_mosaic'] / mosaic_filename
+            np.save(mosaic_save_path, watermark_mosaic)
+
+            # Save PNG preview for quick visual check.
+            preview = watermark_mosaic.astype(np.float32)
+            if preview.max() > 1.0 or preview.min() < 0.0:
+                preview = (preview - preview.min()) / (preview.max() - preview.min() + 1e-8)
+            preview_path = dirs['data_mosaic'] / "watermark_mosaic_256.png"
+            cv2.imwrite(str(preview_path), (preview * 255).astype(np.uint8))
+
+            logging.info(f"Saved watermark mosaic: {mosaic_save_path.name}")
+            logging.info(f"Saved watermark mosaic preview: {preview_path.name}")
+
+    # ============================================================================
+    # PHASE 4B: EMBEDDING INTO I-CHANNEL
+    # ============================================================================
+
+    if watermark_mosaic is not None and watermark_id is not None:
+        logging.info("\n\n" + "="*80)
+        logging.info("PHASE 4B: WATERMARK EMBEDDING")
+        logging.info("="*80)
+
+        embedder = WatermarkEmbedder(alpha=embedding_alpha)
+        i_channel_files = sorted(dirs['preprocessed_i_channel'].glob('*.npy'))
+
+        embedded_count = 0
+        embedding_failures = 0
+
+        for i_channel_path in tqdm(i_channel_files, desc="Embedding watermark"):
+            try:
+                image_id = i_channel_path.stem
+                i_channel = np.load(i_channel_path)
+
+                if i_channel.shape != watermark_mosaic.shape:
+                    logging.warning(
+                        "Skipping %s due to shape mismatch: host=%s, mosaic=%s",
+                        image_id,
+                        i_channel.shape,
+                        watermark_mosaic.shape,
+                    )
+                    embedding_failures += 1
+                    continue
+
+                embedded_i = embedder.embed(i_channel=i_channel, watermark_mosaic=watermark_mosaic)
+                if embedded_i is None:
+                    embedding_failures += 1
+                    continue
+
+                embedded_output_path = dirs['preprocessed_embedded_i_channel'] / f"{image_id}.npy"
+                np.save(embedded_output_path, embedded_i)
+
+                preview_output_path = dirs['preprocessed_embedded_preview'] / f"{image_id}.png"
+                cv2.imwrite(str(preview_output_path), (embedded_i * 255).astype(np.uint8))
+
+                metadata_mgr.save_embedding_metadata(
+                    image_id=image_id,
+                    watermark_id=watermark_id,
+                    embedding_metadata={
+                        'acm_iterations': acm_iterations,
+                        'catalan_iterations': catalan_iterations,
+                        'catalan_key': catalan_key,
+                        'mosaic_shape': list(watermark_mosaic.shape),
+                        'mosaic_grid': [8, 8],
+                        'embedding_alpha': embedding_alpha,
+                        'embedded_i_path': str(embedded_output_path),
+                        'host_i_min': float(i_channel.min()),
+                        'host_i_max': float(i_channel.max()),
+                        'embedded_i_min': float(embedded_i.min()),
+                        'embedded_i_max': float(embedded_i.max())
+                    }
+                )
+
+                embedded_count += 1
+
+            except Exception as e:
+                logging.error(f"Embedding error for {i_channel_path.name}: {str(e)}")
+                embedding_failures += 1
+
+        logging.info("\n" + "="*80)
+        logging.info("Phase 4B: Watermark Embedding Summary")
+        logging.info("="*80)
+        logging.info(f"I-channels scanned: {len(i_channel_files)}")
+        logging.info(f"Successfully embedded: {embedded_count}")
+        logging.info(f"Failed embeddings: {embedding_failures}")
     
     logging.info("\n" + "="*80)
     logging.info("ALL PHASES COMPLETE!")

@@ -1,4 +1,4 @@
-# Watermarking System - Phase 2 Complete
+# Watermarking System - Phase 4 (Mosaic + Embedding) Implemented
 
 A modular watermarking system implementing Arnold Cat Map (ACM) scrambling for secure watermark embedding in images.
 
@@ -18,6 +18,17 @@ A modular watermarking system implementing Arnold Cat Map (ACM) scrambling for s
 - Configurable iteration count (encryption key)
 - Comprehensive validation suite
 
+### Phase 3: Catalan Transform ✓
+- Deterministic Catalan-number-based permutation
+- Reversible inverse transform support
+- Configurable iteration count and key
+
+### Phase 4: Mosaic + Embedding ✓
+- 8x8 tiling of transformed 32x32 watermark to 256x256 mosaic
+- Additive embedding into normalized I-channel
+- Embedded output saving (`preprocessed/embedded_I_channel/`)
+- Per-image embedding metadata (`preprocessed/metadata/embedding_*.json`)
+
 ## Project Structure
 
 ```
@@ -25,9 +36,13 @@ Code/
 ├── data/
 │   ├── watermark/          # Input watermark images
 │   ├── scrambled/          # Scrambled watermarks
+│   ├── catalan/            # Catalan-transformed watermarks
+│   ├── mosaic/             # Generated watermark mosaics
 │   └── raw/                # Raw image datasets (not in git)
 ├── preprocessed/           # Processed data (generated)
 │   ├── I_channel/          # Extracted I-channel data
+│   ├── embedded_I_channel/ # Embedded I-channel outputs
+│   ├── embedded_preview/   # Embedded PNG previews
 │   ├── rgb_256/            # Resized RGB images
 │   └── metadata/           # Processing metadata
 ├── splits/                 # Train/val/test splits
@@ -40,6 +55,7 @@ Code/
 ├── main.py                 # Pipeline orchestration
 ├── generate_watermark.py   # Watermark generation utility
 ├── test_phase2.py          # Phase 2 validation
+├── test_phase3_mosaic_embedding.py  # Phase 3-4 validation
 └── requirements.txt        # Python dependencies
 ```
 
@@ -99,9 +115,17 @@ python test_phase2.py
 ```bash
 python main.py
 ```
-- Executes Phase 1 (preprocessing) + Phase 2 (scrambling)
+- Executes Phase 1 (preprocessing) + Phase 2 (scrambling) + Phase 3 (Catalan) + Phase 4 (mosaic + embedding)
 - Processes all images in data/raw/
 - Generates train/val/test splits
+
+### Run Phase 3 + Phase 4 Validation
+```bash
+python test_phase3_mosaic_embedding.py
+```
+- Validates Catalan forward/inverse consistency
+- Validates 256x256 mosaic generation from 32x32 watermark
+- Validates embedding output shape/range
 
 ## Configuration
 
@@ -172,8 +196,8 @@ Pillow>=10.0.0          # Image generation
 ### Project Status
 - [x] Phase 1: Data Preprocessing
 - [x] Phase 2: Watermark Scrambling (Arnold Cat Map)
-- [ ] Phase 3: Catalan Transform
-- [ ] Phase 4: Watermark Embedding
+- [x] Phase 3: Catalan Transform
+- [x] Phase 4: Watermark Embedding (with mosaic generation)
 - [ ] Phase 5: Watermark Extraction
 
 ### Contributing

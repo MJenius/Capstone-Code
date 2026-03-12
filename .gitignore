@@ -53,6 +53,19 @@ preprocessed/metadata/*.json
 data/scrambled/*.npy
 data/scrambled/*.png
 
+# Phase 3/4 generated artifacts (regenerate from pipeline)
+data/catalan/*.npy
+data/mosaic/*.npy
+data/mosaic/*.png
+preprocessed/embedded_I_channel/*.npy
+preprocessed/embedded_preview/*.png
+
+# Pipeline helper outputs
+failed_images.txt
+phase2_test.log
+phase3_mosaic_embedding_test.log
+preprocessing.log
+
 # Test outputs
 test_output/
 *.test.py
