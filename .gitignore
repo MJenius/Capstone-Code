@@ -1,94 +1,47 @@
+# Pre-trained models and dataset results
+training_data/
+verification/
+benchmarking_results*.json
+collusion_curve.json
+study_comparison_metrics.json
+
+# Image data (Datasets and generated artifacts)
+DIV2K.tar
+data/raw/
+data/scrambled/
+data/catalan/
+data/mosaic/
+data/watermark/*.npy
+!data/watermark/watermark_binary.png
+
+# Preprocessed outputs
+preprocessed/
+!preprocessed/embedded_I_channel/
+!preprocessed/embedded_I_channel/.gitkeep
+!preprocessed/embedded_preview/
+!preprocessed/embedded_preview/.gitkeep
+
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-
-# Virtual Environment
-venv/
 env/
-ENV/
-.venv
+venv/
+.venv/
+build/
+dist/
+*.egg-info/
 
 # IDEs
 .vscode/
 .idea/
-*.swp
-*.swo
-*~
 .DS_Store
-
-# Logs
-*.log
-logs/
-
-# Large datasets (download separately)
-DIV2K.tar
-data/raw/div2k/
-data/raw/bossbase/
-
-# Preprocessed outputs (regenerate from pipeline)
-preprocessed/I_channel/*.npy
-preprocessed/rgb_256/*.png
-preprocessed/metadata/*.json
-
-# Scrambled watermarks (regenerate from pipeline)
-data/scrambled/*.npy
-data/scrambled/*.png
-
-# Phase 3/4 generated artifacts (regenerate from pipeline)
-data/catalan/*.npy
-data/mosaic/*.npy
-data/mosaic/*.png
-preprocessed/embedded_I_channel/*.npy
-preprocessed/embedded_preview/*.png
-preprocessed/process_collage/*.png
-
-# Keep preview folders visible with exactly one tracked sample image each
-!preprocessed/embedded_preview/.gitkeep
-!preprocessed/embedded_preview/0001_00000.png
-!preprocessed/process_collage/.gitkeep
-!preprocessed/process_collage/0001_00000.png
-
-# Pipeline helper outputs
-failed_images.txt
-phase2_test.log
-phase3_mosaic_embedding_test.log
-preprocessing.log
-
-# Test outputs
-test_output/
-*.test.py
-temp/
-tmp/
-
-# Jupyter Notebooks checkpoints
-.ipynb_checkpoints/
-
-# Environment variables
-.env
-.env.local
-
-# OS
 Thumbs.db
-.DS_Store
+*.swp
 
-# Git
-*.orig
+# logs
+*.log
+preprocessing.log
+phase*.log
