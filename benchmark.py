@@ -112,7 +112,10 @@ class Benchmarker:
 
                 # Extraction
                 extr_hybrid_raw = self.extract_non_blind(atk_hybrid, host)
-                extr_base_raw = self.extract_non_blind(atk_base, host)
+                # For baseline, we use the visible alpha (0.4) for non-blind extraction simulator
+                # Note: self.extract_non_blind uses self.alpha (0.08), so we do it manually for baseline
+                extr_base_raw = (atk_base - host) / 0.4 + 0.5
+                extr_base_raw = np.clip(extr_base_raw, 0, 1)
                 
                 # Hybrid Extraction logic: Average over 8x8 tiles (each 32x32)
                 tiles = []
@@ -147,7 +150,9 @@ class Benchmarker:
                     "hybrid_ber": float(h_ber),
                     "baseline_ber": float(b_ber),
                     "hybrid_psnr": float(hybrid_psnr),
+                    "hybrid_ssim": float(hybrid_ssim),
                     "baseline_psnr": float(base_psnr),
+                    "baseline_ssim": float(base_ssim),
                     "crr": float(crr)
                 })
 
@@ -159,4 +164,4 @@ class Benchmarker:
 
 if __name__ == "__main__":
     benchmarker = Benchmarker()
-    benchmarker.run_benchmark(num_images=5)
+    benchmarker.run_benchmark(num_images=20)
