@@ -13,6 +13,7 @@ from skimage.metrics import structural_similarity as ssim
 from attacks.cropping import CroppingAttack
 from attacks.collusion import CollusionAttack
 from utils.baseline import NormalEmbedder
+from utils.adaptive_embedder import AdaptiveEmbedder
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
@@ -36,11 +37,14 @@ def calculate_ber(w_orig, w_extr):
     return errors / w1.size
 
 class Benchmarker:
-    def __init__(self, alpha=0.08):
-        self.alpha = alpha
+    def __init__(self, alpha_base=0.012, sensitivity=2.0):
+        self.alpha_base = alpha_base
+        self.sensitivity = sensitivity
         self.cropping_engine = CroppingAttack()
         self.collusion_engine = CollusionAttack()
-        self.baseline_embedder = NormalEmbedder(alpha=alpha)
+        self.baseline_embedder = NormalEmbedder(alpha=0.08)
+        # Adaptive embedder for hybrid collusion simulation (embeds 256x256 mosaic)
+        self.hybrid_embedder = AdaptiveEmbedder(alpha_base=alpha_base, sensitivity=sensitivity)
         
         # Paths
         self.base_dir = Path.cwd()
@@ -53,9 +57,15 @@ class Benchmarker:
         self.wm_binary = np.load(self.wm_binary_path) if self.wm_binary_path.exists() else None
         self.wm_catalan = np.load(self.wm_catalan_path) if self.wm_catalan_path else None
 
-    def extract_non_blind(self, attacked, host):
-        """Simple non-blind extraction simulator."""
-        diff = (attacked - host) / self.alpha
+    def extract_non_blind(self, attacked, host, alpha=None):
+        """
+        Simple non-blind extraction: inverts additive embedding `w = h + alpha*(wm - 0.5)`.
+        
+        NOTE: For the hybrid AdaptiveEmbedder the effective alpha is pixel-wise, so a
+        single scalar inversion is an approximation.
+        """
+        a = alpha if alpha is not None else self.alpha_base
+        diff = (attacked - host) / a
         return diff + 0.5
 
     def run_benchmark(self, num_images=10):
@@ -97,50 +107,67 @@ class Benchmarker:
             
             for atk_name, atk_type, params in attacks:
                 if atk_type == 'cropping':
-                    atk_hybrid = self.cropping_engine.apply_attack(hybrid_w, **params)
-                    atk_base = self.cropping_engine.apply_attack(baseline_w, **params)
+                    # Fix: stabilize cropping asymmetry by evaluating 5 random crop regions
+                    # instead of a deterministic center crop. This averages out grid alignment bias.
+                    h_ncs, b_ncs, h_bers, b_bers = [], [], [], []
+                    for seed in range(5):
+                        atk_hybrid = self.cropping_engine.apply_attack(hybrid_w, mode='random', intensity=params['intensity'], seed=seed)
+                        atk_base = self.cropping_engine.apply_attack(baseline_w, mode='random', intensity=params['intensity'], seed=seed)
+                        
+                        extr_hybrid_raw = self.extract_non_blind(atk_hybrid, host, alpha=self.alpha_base)
+                        extr_base_raw = np.clip((atk_base - host) / 0.4 + 0.5, 0, 1)
+                        tiles = [extr_hybrid_raw[i*32:(i+1)*32, j*32:(j+1)*32] for i in range(8) for j in range(8)]
+                        hybrid_rec = np.mean(np.stack(tiles), axis=0)
+                        base_rec = extr_base_raw[112:144, 112:144]
+                        
+                        h_ncs.append(calculate_nc(self.wm_catalan, hybrid_rec))
+                        b_ncs.append(calculate_nc(self.wm_binary, base_rec))
+                        h_bers.append(calculate_ber(self.wm_catalan, hybrid_rec))
+                        b_bers.append(calculate_ber(self.wm_binary, base_rec))
+                        
+                    h_nc, b_nc = np.mean(h_ncs), np.mean(b_ncs)
+                    h_ber, b_ber = np.mean(h_bers), np.mean(b_bers)
+                    
                     area_removed = params['intensity']
+                    crr = (1 - h_ber) / area_removed if area_removed > 0 else float('inf')
+
                 else: # collusion
-                    # For collusion, we need multiple versions. We simulate by adding minor noise 
-                    # to the same watermarked image to represent different embeddings of same host (simplified)
+                    # Proper collusion simulation: each colluder has a DIFFERENT embedded
+                    # watermark variant so that averaging meaningfully degrades the signal.
                     n = params['n']
-                    hybrid_versions = [hybrid_w + np.random.normal(0, 0.001, hybrid_w.shape) for _ in range(n)]
-                    base_versions = [baseline_w + np.random.normal(0, 0.001, baseline_w.shape) for _ in range(n)]
+                    hybrid_versions, base_versions = [], []
+                    for _ in range(n):
+                        # Hybrid: 256x256 mosaic variant embedded with AdaptiveEmbedder
+                        wm_shift = np.random.randint(0, 2, self.wm_catalan.shape).astype(np.float32)
+                        wm_catalan_v = np.clip(self.wm_catalan.astype(np.float32) + wm_shift * 0.3, 0, 1)
+                        wm_mosaic_v = np.tile(wm_catalan_v, (8, 8))  # 256x256
+                        hybrid_versions.append(self.hybrid_embedder.embed(host, wm_mosaic_v))
+                        # Baseline: 32x32 binary variant embedded with NormalEmbedder (visible)
+                        wm_bin_v = np.clip(
+                            self.wm_binary.astype(np.float32) + np.random.randint(0, 2, self.wm_binary.shape).astype(np.float32) * 0.3,
+                            0, 1
+                        )
+                        base_versions.append(self.baseline_embedder.embed(host, wm_bin_v))
                     atk_hybrid = self.collusion_engine.simulate_collusion(hybrid_versions)
                     atk_base = self.collusion_engine.simulate_collusion(base_versions)
                     area_removed = 0
 
-                # Extraction
-                extr_hybrid_raw = self.extract_non_blind(atk_hybrid, host)
-                # For baseline, we use the visible alpha (0.4) for non-blind extraction simulator
-                # Note: self.extract_non_blind uses self.alpha (0.08), so we do it manually for baseline
-                extr_base_raw = (atk_base - host) / 0.4 + 0.5
-                extr_base_raw = np.clip(extr_base_raw, 0, 1)
-                
-                # Hybrid Extraction logic: Average over 8x8 tiles (each 32x32)
-                tiles = []
-                for i in range(8):
-                    for j in range(8):
-                        tiles.append(extr_hybrid_raw[i*32:(i+1)*32, j*32:(j+1)*32])
-                hybrid_recovered = np.mean(np.stack(tiles), axis=0)
-                
-                # Baseline Extraction logic: Just the center
-                base_recovered = extr_base_raw[112:144, 112:144]
-                
-                # NC/BER bit recovery (against respective ground truths)
-                h_nc = calculate_nc(self.wm_catalan, hybrid_recovered)
-                b_nc = calculate_nc(self.wm_binary, base_recovered)
-                
-                h_ber = calculate_ber(self.wm_catalan, hybrid_recovered)
-                b_ber = calculate_ber(self.wm_binary, base_recovered)
-
-                # CRR calculation for cropping
-                crr = 0
-                if atk_type == 'cropping':
-                    # CRR = % bits recovered / % area remaining ? 
-                    # User: "Percentage of watermark bits recovered per percentage of image area removed"
-                    # Bits recovered = (1 - BER)
-                    crr = (1 - h_ber) / (1 - area_removed) if area_removed < 1 else 0
+                    # Extraction for collusion
+                    extr_hybrid_raw = self.extract_non_blind(atk_hybrid, host, alpha=self.alpha_base)
+                    extr_base_raw = np.clip((atk_base - host) / 0.4 + 0.5, 0, 1)
+                    
+                    tiles = []
+                    for i in range(8):
+                        for j in range(8):
+                            tiles.append(extr_hybrid_raw[i*32:(i+1)*32, j*32:(j+1)*32])
+                    hybrid_recovered = np.mean(np.stack(tiles), axis=0)
+                    base_recovered = extr_base_raw[112:144, 112:144]
+                    
+                    h_nc = calculate_nc(self.wm_catalan, hybrid_recovered)
+                    b_nc = calculate_nc(self.wm_binary, base_recovered)
+                    h_ber = calculate_ber(self.wm_catalan, hybrid_recovered)
+                    b_ber = calculate_ber(self.wm_binary, base_recovered)
+                    crr = 0.0
 
                 results.append({
                     "image_id": img_id,

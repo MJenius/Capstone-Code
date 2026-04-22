@@ -104,7 +104,7 @@ def main() -> int:
     i_max = float(meta["i_channel_max"])
 
     yiq_original = bgr_to_yiq(original_bgr)
-    embedded_i = embedded_i_norm * (i_max - i_min) + i_min
+    embedded_i = embedded_i_norm * (i_max - i_min + 1e-8) + i_min  # epsilon matches normalisation
 
     yiq_embedded = yiq_original.copy()
     yiq_embedded[:, :, 1] = embedded_i

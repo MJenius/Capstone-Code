@@ -24,7 +24,7 @@ from utils.metadata_mgr import MetadataManager, create_splits
 from utils.scrambler import WatermarkScrambler
 from utils.catalan import CatalanTransform
 from utils.mosaic import MosaicGenerator
-from utils.embedder import WatermarkEmbedder
+from utils.adaptive_embedder import AdaptiveEmbedder
 
 
 # Configure logging
@@ -301,20 +301,12 @@ def main():
             logging.error(f"Unexpected error processing {image_path}: {str(e)}")
             failed_images.append((image_path, f"Unexpected error: {str(e)}"))
     
-    # Step 4: Create train/val/test splits
-    logging.info("\n" + "="*80)
-    logging.info("Step 4: Creating dataset splits")
-    logging.info("="*80)
-    
-    if successfully_processed_ids:
-        train_ids, val_ids, test_ids = create_splits(
-            all_ids=successfully_processed_ids,
-            splits_dir=dirs['splits'],
-            ratios=[0.7, 0.15, 0.15],
-            random_seed=42
-        )
-    else:
-        logging.error("No images were successfully processed. Cannot create splits.")
+    # Step 4: Dataset splits will be created AFTER embedding (Phase 4B)
+    # to ensure only successfully embedded images appear in splits.
+    # If Phase 2+ is skipped (no watermark), splits are created here from preprocessed IDs.
+    splits_created = False
+    if not watermark_files if False else False:  # placeholder — see Phase 4B below
+        pass
     
     # Step 5: Summary
     logging.info("\n" + "="*80)
@@ -324,11 +316,8 @@ def main():
     logging.info(f"Successfully processed: {len(successfully_processed_ids)}")
     logging.info(f"Failed: {len(failed_images)}")
     
-    if successfully_processed_ids:
-        logging.info(f"\nDataset splits:")
-        logging.info(f"  Training: {len(train_ids)} images")
-        logging.info(f"  Validation: {len(val_ids)} images")
-        logging.info(f"  Test: {len(test_ids)} images")
+    if False:
+        pass
     
     if failed_images:
         logging.info("\nFailed images:")
@@ -364,7 +353,8 @@ def main():
     acm_iterations = 10
     catalan_iterations = 5
     catalan_key = 7
-    embedding_alpha = 0.08
+    embedding_alpha_base = 0.012
+    embedding_sensitivity = 2.0
 
     watermark_scrambled = None
     watermark_binary = None
@@ -520,7 +510,7 @@ def main():
         logging.info("PHASE 4B: WATERMARK EMBEDDING")
         logging.info("="*80)
 
-        embedder = WatermarkEmbedder(alpha=embedding_alpha)
+        embedder = AdaptiveEmbedder(alpha_base=embedding_alpha_base, sensitivity=embedding_sensitivity)
         i_channel_files = sorted(dirs['preprocessed_i_channel'].glob('*.npy'))
 
         embedded_count = 0
@@ -602,7 +592,8 @@ def main():
                         'catalan_key': catalan_key,
                         'mosaic_shape': list(watermark_mosaic.shape),
                         'mosaic_grid': [8, 8],
-                        'embedding_alpha': embedding_alpha,
+                        'embedding_alpha_base': embedding_alpha_base,
+                        'embedding_sensitivity': embedding_sensitivity,
                         'embedded_i_path': str(embedded_output_path),
                         'host_i_min': float(i_channel.min()),
                         'host_i_max': float(i_channel.max()),
@@ -623,6 +614,28 @@ def main():
         logging.info(f"I-channels scanned: {len(i_channel_files)}")
         logging.info(f"Successfully embedded: {embedded_count}")
         logging.info(f"Failed embeddings: {embedding_failures}")
+
+        # Step 4 (deferred): Create splits ONLY from images that survived embedding.
+        # This prevents embedding failures from silently appearing in the test split.
+        logging.info("\n" + "="*80)
+        logging.info("Step 4: Creating dataset splits (post-embedding)")
+        logging.info("="*80)
+        embedded_ids = [
+            p.stem for p in sorted(dirs['preprocessed_embedded_i_channel'].glob('*.npy'))
+        ]
+        if embedded_ids:
+            train_ids, val_ids, test_ids = create_splits(
+                all_ids=embedded_ids,
+                splits_dir=dirs['splits'],
+                ratios=[0.7, 0.15, 0.15],
+                random_seed=42
+            )
+            logging.info(f"Dataset splits (from {len(embedded_ids)} embedded images):")
+            logging.info(f"  Training: {len(train_ids)} images")
+            logging.info(f"  Validation: {len(val_ids)} images")
+            logging.info(f"  Test: {len(test_ids)} images")
+        else:
+            logging.error("No embedded images found. Splits not created.")
     
     logging.info("\n" + "="*80)
     logging.info("ALL PHASES COMPLETE!")

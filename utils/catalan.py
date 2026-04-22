@@ -51,9 +51,17 @@ class CatalanTransform:
         offset = max(0, key + iteration)
         catalan = self._catalan_sequence(length=length, offset=offset)
 
-        # Use modulo to keep values bounded and pair with index for stable uniqueness.
-        sortable = [((int(catalan[i] % max(length, 1))), i) for i in range(length)]
-        ordered = sorted(sortable, key=lambda item: (item[0], item[1]))
+        # Hash each (catalan_value, index, key) tuple to a 64-bit integer.
+        # This avoids the modulo-collapse that causes many equal sort keys when
+        # Catalan numbers grow large, which previously made the sort degenerate
+        # into a near-identity permutation for large arrays.
+        import hashlib
+        def _sort_key(i: int) -> int:
+            raw = f"{catalan[i]}:{i}:{key}:{iteration}".encode()
+            return int(hashlib.blake2b(raw, digest_size=8).hexdigest(), 16)
+
+        sortable = [(_sort_key(i), i) for i in range(length)]
+        ordered = sorted(sortable, key=lambda item: item[0])
         perm = np.array([idx for _, idx in ordered], dtype=np.int64)
 
         return perm

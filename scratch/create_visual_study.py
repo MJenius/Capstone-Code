@@ -81,8 +81,7 @@ def main():
     wm_mosaic = np.tile(wm_catalan, (8, 8))  # 256x256
     
     # 1. Embeddings
-    # Using slightly higher alpha for clear visibility in comparison study
-    hybrid_embedder = AdaptiveEmbedder(alpha_base=0.08, sensitivity=0.0) 
+    hybrid_embedder = AdaptiveEmbedder(alpha_base=0.012, sensitivity=2.0) 
     baseline_embedder = NormalEmbedder(alpha=0.08)
     
     embedded_hybrid_i = hybrid_embedder.embed(host_i, wm_mosaic)
@@ -95,15 +94,18 @@ def main():
     # 3. Extraction Simulation
     def extract_hybrid(attacked_i, host_i):
         # Non-blind extraction simulation
-        diff = (attacked_i - host_i) / 0.08 + 0.5
+        diff = (attacked_i - host_i) / 0.012 + 0.5
         tiles = [diff[i*32:(i+1)*32, j*32:(j+1)*32] for i in range(8) for j in range(8)]
         return np.mean(np.stack(tiles), axis=0)
         
     def extract_baseline(attacked_i, host_i):
-        # Baseline is 32x32 at center (112, 112)
-        # 0.4 was the visible alpha in NormalEmbedder
-        diff = (attacked_i - host_i) / 0.4 + 0.5
-        return diff[112:144, 112:144]
+        # NormalEmbedder with visible=True uses BLEND formula:
+        #   embedded = (1 - alpha_vis) * host + alpha_vis * wm
+        # Correct inversion:
+        #   wm_recovered = (attacked - (1 - alpha_vis) * host) / alpha_vis
+        alpha_vis = 0.4
+        recovered_full = (attacked_i - (1.0 - alpha_vis) * host_i) / alpha_vis
+        return recovered_full[112:144, 112:144]
 
     rec_hybrid = extract_hybrid(atk_hybrid_i, host_i)
     rec_baseline = extract_baseline(atk_baseline_i, host_i)

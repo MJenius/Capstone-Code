@@ -124,19 +124,14 @@ class WatermarkScrambler:
             N = height
             scrambled = image.copy()
             
-            # Apply Arnold Cat Map transformation for specified iterations
+            # Apply Arnold Cat Map transformation for specified iterations (vectorized)
+            x_idx, y_idx = np.meshgrid(np.arange(N), np.arange(N), indexing='ij')
+            x_new_idx = (x_idx + y_idx) % N
+            y_new_idx = (x_idx + 2 * y_idx) % N
+
             for iteration in range(iterations):
                 temp = np.zeros_like(scrambled)
-                
-                for x in range(N):
-                    for y in range(N):
-                        # Arnold Cat Map transformation
-                        x_new = (x + y) % N
-                        y_new = (x + 2 * y) % N
-                        
-                        # Map pixel from (x, y) to (x_new, y_new)
-                        temp[x_new, y_new] = scrambled[x, y]
-                
+                temp[x_new_idx, y_new_idx] = scrambled[x_idx, y_idx]
                 scrambled = temp
             
             logging.info(f"Successfully scrambled {N}x{N} watermark with {iterations} iterations")
@@ -188,19 +183,14 @@ class WatermarkScrambler:
             N = height
             descrambled = scrambled_image.copy()
             
-            # Apply inverse Arnold Cat Map transformation for specified iterations
+            # Apply inverse Arnold Cat Map transformation for specified iterations (vectorized)
+            x_new_idx, y_new_idx = np.meshgrid(np.arange(N), np.arange(N), indexing='ij')
+            x_idx = (2 * x_new_idx - y_new_idx) % N
+            y_idx = (-x_new_idx + y_new_idx) % N
+
             for iteration in range(iterations):
                 temp = np.zeros_like(descrambled)
-                
-                for x_new in range(N):
-                    for y_new in range(N):
-                        # Inverse Arnold Cat Map transformation
-                        x = (2 * x_new - y_new) % N
-                        y = (-x_new + y_new) % N
-                        
-                        # Map pixel from (x_new, y_new) back to (x, y)
-                        temp[x, y] = descrambled[x_new, y_new]
-                
+                temp[x_idx, y_idx] = descrambled[x_new_idx, y_new_idx]
                 descrambled = temp
             
             logging.info(f"Successfully descrambled {N}x{N} watermark with {iterations} iterations")

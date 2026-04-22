@@ -26,18 +26,27 @@ def generate_binary_watermark(text="PW26_PAC_01", size=(32, 32), output_path="da
     os.makedirs(output_path, exist_ok=True)
 
     # 2. Create a new black image (mode '1' for 1-bit pixels)
-    # We start with a larger canvas to get better font rendering, then resize
-    canvas_size = 128 
+    # Use a large canvas for better font rendering quality before downsampling.
+    canvas_size = 256
     img = Image.new('1', (canvas_size, canvas_size), color=0)
     draw = ImageDraw.Draw(img)
 
-    # 3. Load a font
+    # 3. Load a font — use size 32 so text is legible after downsampling to 32x32
     try:
         # Attempt to use a standard system font
-        font = ImageFont.truetype("arial.ttf", 20)
+        font = ImageFont.truetype("arial.ttf", 32)
     except IOError:
-        # Fallback to default if arial is not found
-        font = ImageFont.load_default()
+        try:
+            font = ImageFont.truetype("DejaVuSans.ttf", 32)
+        except IOError:
+            # Fallback: PIL default is tiny (~8px). Log a prominent warning.
+            import logging
+            logging.warning(
+                "generate_watermark: No TrueType font found. Falling back to PIL default "
+                "(~8px). The 32x32 watermark may be blank or illegible. "
+                "Install 'arial.ttf' or 'DejaVuSans.ttf' for reliable results."
+            )
+            font = ImageFont.load_default()
 
     # 4. Calculate text position (centered)
     # Use textbbox for newer Pillow versions; textsize is deprecated
@@ -70,6 +79,16 @@ def generate_binary_watermark(text="PW26_PAC_01", size=(32, 32), output_path="da
     print(f"  - Array: watermark_binary.npy")
     print(f"  - Shape: {watermark_array.shape}")
     print(f"  - Unique values: {np.unique(watermark_array)}")
+
+    # Validate: warn loudly if the watermark is trivially blank or uniform.
+    dominant = np.bincount(watermark_array.flatten()).max()
+    fill_fraction = dominant / watermark_array.size
+    if fill_fraction > 0.90:
+        raise RuntimeError(
+            f"generate_watermark: watermark appears blank or near-uniform "
+            f"({fill_fraction*100:.1f}% of pixels share the same value). "
+            "Check that a legible TrueType font is available or adjust canvas_size/font_size."
+        )
     
     return watermark_array
 

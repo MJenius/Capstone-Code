@@ -41,7 +41,15 @@ def create_dataset():
         # 1. Embed (Adaptive)
         watermarked = embedder.embed(host, wm_mosaic)
         
-        # 2. Random Attack Chain
+        # 2. Compute the CLEAN recovered signal as the label.
+        # The label is the non-blind extracted watermark *before* any attack,
+        # i.e. the ground-truth signal an ANN should learn to recover.
+        # Using the mean alpha used by the embedder (alpha_base=0.03).
+        alpha_base = 0.03
+        clean_diff = (watermarked - host) / alpha_base + 0.5   # shape: (256, 256), values ~[0, 1]
+        label_signal = np.clip(clean_diff, 0.0, 1.0)
+
+        # 3. Random Attack Chain
         distorted = watermarked.copy()
         
         # Step A: Geometric (Crop) - 50% chance
@@ -52,11 +60,11 @@ def create_dataset():
         # Step B: Signal (JPEG/Noise/Blur)
         distorted = signaller.apply_random_signal_attack(distorted)
         
-        # 3. Save Pairs
-        # Input: Distorted I-Channel (256x256)
-        # Label: Original Catalan Mosaic (256x256)
+        # 4. Save Pairs
+        # Input:  Distorted I-Channel (256x256) — what the network sees
+        # Label:  Clean recovered watermark signal (256x256) — what it should produce
         np.save(output_dir / 'inputs' / f"{img_id}.npy", distorted)
-        np.save(output_dir / 'labels' / f"{img_id}.npy", wm_mosaic)
+        np.save(output_dir / 'labels' / f"{img_id}.npy", label_signal)
 
 if __name__ == "__main__":
     create_dataset()

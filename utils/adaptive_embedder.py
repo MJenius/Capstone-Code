@@ -46,10 +46,19 @@ class AdaptiveEmbedder:
         # 1. Get texture mask
         mask = self.get_texture_mask(i_channel)
         
+        # 1b. Create a spatial weight map (Gaussian) that emphasizes the center
+        h, w = i_channel.shape
+        y, x = np.ogrid[-h/2:h/2, -w/2:w/2]
+        # Gaussian with sigma = h/2, amplitude = 1 at center, ~0.6 at edge
+        spatial_weight = np.exp(-(x**2 + y**2) / (2 * (h/2)**2))
+        # Scale to [1.0, 1.5]
+        spatial_weight = 1.0 + 0.5 * spatial_weight
+        
         # 2. Calculate pixel-wise alpha
         # Smooth areas (mask~0) get alpha_base
         # Textured areas (mask~1) get alpha_base * (1 + sensitivity)
-        alpha_pixel = self.alpha_base * (1.0 + self.sensitivity * mask)
+        # Then multiply by the spatial weight to bump the center
+        alpha_pixel = self.alpha_base * (1.0 + self.sensitivity * mask) * spatial_weight
         
         # 3. Embed
         host = i_channel.astype(np.float32)

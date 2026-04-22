@@ -38,6 +38,10 @@ class BenchmarkerV2:
         results = []
         host_files = sorted(list(self.host_dir.glob('*.npy')))[:num_images]
         
+        # Collusion curve accumulator: n_value -> list of NC scores
+        n_values = [2, 5, 10, 20, 50, 100]
+        collusion_nc_accum = {n: [] for n in n_values}
+        
         for h_path in tqdm(host_files, desc="Benchmarking V2"):
             img_id = h_path.stem
             host = np.load(h_path)
@@ -64,7 +68,7 @@ class BenchmarkerV2:
                 else: atk = self.signaller.apply_gaussian_blur(watermarked, kernel_size=param)
                 
                 # Extract and NC
-                diff = (atk - host) / 0.05 + 0.5 # Estimated mean alpha
+                diff = (atk - host) / 0.012 + 0.5 # Estimated mean alpha
                 tiles = [diff[i*32:(i+1)*32, j*32:(j+1)*32] for i in range(8) for j in range(8)]
                 recovered = np.mean(np.stack(tiles), axis=0)
                 nc = calculate_nc(self.wm_catalan, recovered)
@@ -77,22 +81,33 @@ class BenchmarkerV2:
                     "ssim": float(cur_ssim)
                 })
 
-            # Collusion Sensitivity Curve (for first image only to save time)
-            if img_id == host_files[0].stem:
-                n_values = [2, 5, 10, 20, 50, 100]
-                collusion_curve = []
-                for n in n_values:
-                    versions = [watermarked + np.random.normal(0, 0.005, watermarked.shape) for _ in range(n)]
-                    atk = self.colluder.simulate_collusion(versions, noise_std=0.02)
-                    diff = (atk - host) / 0.05 + 0.5
-                    tiles = [diff[i*32:(i+1)*32, j*32:(j+1)*32] for i in range(8) for j in range(8)]
-                    recovered = np.mean(np.stack(tiles), axis=0)
-                    nc = calculate_nc(self.wm_catalan, recovered)
-                    collusion_curve.append({"n": n, "nc": float(nc)})
-                
-                # Special entry for curve
-                with open('collusion_curve.json', 'w') as f:
-                    json.dump(collusion_curve, f, indent=4)
+            # Collusion Sensitivity Curve — accumulated across ALL images
+            for n in n_values:
+                # Proper collusion: each version carries a DIFFERENT watermark variant so
+                # that averaging meaningfully destroys the signal instead of just averaging
+                # n near-identical images (which would give trivially high NC).
+                versions = []
+                for _ in range(n):
+                    wm_shift = np.random.randint(0, 2, self.wm_catalan.shape).astype(np.float32)
+                    wm_variant = np.tile(
+                        np.clip(self.wm_catalan.astype(np.float32) + wm_shift * 0.2, 0, 1),
+                        (8, 8)
+                    )
+                    versions.append(self.embedder.embed(host, wm_variant))
+                atk = self.colluder.simulate_collusion(versions, noise_std=0.02)
+                diff = (atk - host) / 0.012 + 0.5
+                tiles = [diff[i*32:(i+1)*32, j*32:(j+1)*32] for i in range(8) for j in range(8)]
+                recovered = np.mean(np.stack(tiles), axis=0)
+                nc = calculate_nc(self.wm_catalan, recovered)
+                collusion_nc_accum[n].append(float(nc))
+
+        # Save averaged collusion curve
+        collusion_curve = [
+            {"n": n, "nc": float(np.mean(collusion_nc_accum[n]))}
+            for n in n_values
+        ]
+        with open('collusion_curve.json', 'w') as f:
+            json.dump(collusion_curve, f, indent=4)
 
         with open('benchmarking_results_v2.json', 'w') as f:
             json.dump(results, f, indent=4)

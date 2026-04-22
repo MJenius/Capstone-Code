@@ -19,7 +19,8 @@ class CroppingAttack:
         image: np.ndarray, 
         mode: str = 'center', 
         intensity: float = 0.1, 
-        fill_val: str = 'zero'
+        fill_val: str = 'zero',
+        seed: int = None
     ) -> np.ndarray:
         """
         Apply a cropping attack.
@@ -45,8 +46,13 @@ class CroppingAttack:
             y0 = (h - side) // 2
             x0 = (w - side) // 2
         elif mode == 'random':
-            y0 = np.random.randint(0, h - side)
-            x0 = np.random.randint(0, w - side)
+            if seed is not None:
+                rng = np.random.RandomState(seed)
+                y0 = rng.randint(0, h - side)
+                x0 = rng.randint(0, w - side)
+            else:
+                y0 = np.random.randint(0, h - side)
+                x0 = np.random.randint(0, w - side)
         elif mode == 'quadrant':
             # Remove a quadrant-like area from the edge (e.g., top-left)
             y0 = 0
@@ -64,8 +70,20 @@ class CroppingAttack:
             
         return np.clip(attacked, 0.0, 1.0)
 
-    def get_mask(self, mode: str, intensity: float) -> np.ndarray:
-        """Helper to get the binary mask of what was kept (for bit recovery calcs)"""
+    def get_mask(self, mode: str, intensity: float, seed: int = None) -> np.ndarray:
+        """
+        Return a binary mask (1 = kept, 0 = removed) matching the attack region.
+
+        Args:
+            mode:      'center', 'random', or 'quadrant'
+            intensity: Fraction of total area to remove
+            seed:      RNG seed for 'random' mode.  Must match the seed used in
+                       apply_attack to get a consistent mask.  When None the mask
+                       falls back to the center crop position (an approximation).
+
+        Returns:
+            Binary float32 mask of shape (target_size, target_size)
+        """
         mask = np.ones((self.target_size, self.target_size), dtype=np.float32)
         h, w = mask.shape
         side = int(np.sqrt(h * w * intensity))
@@ -73,8 +91,17 @@ class CroppingAttack:
         if mode == 'center':
             y0, x0 = (h - side) // 2, (w - side) // 2
         elif mode == 'random':
-            # Note: For random, this is just one realization
-            y0, x0 = (h - side) // 2, (w - side) // 2 
+            if seed is not None:
+                rng = np.random.RandomState(seed)
+                y0 = int(rng.randint(0, h - side))
+                x0 = int(rng.randint(0, w - side))
+            else:
+                # No seed given: approximate with center position.
+                # For an exact match, pass the same seed used in apply_attack.
+                logging.warning(
+                    "get_mask(mode='random') called without seed — returning center-crop approximation."
+                )
+                y0, x0 = (h - side) // 2, (w - side) // 2
         elif mode == 'quadrant':
             y0, x0 = 0, 0
         else:
