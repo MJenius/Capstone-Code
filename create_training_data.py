@@ -31,8 +31,13 @@ def create_dataset():
     cropper = CroppingAttack()
     signaller = SignalAttack()
     
+    # Set deterministic random seeds
+    random.seed(42)
+    np.random.seed(42)
+
     host_files = sorted(list(host_dir.glob('*.npy')))
     print(f"Generating training data for {len(host_files)} host images...")
+
     
     for h_path in tqdm(host_files):
         img_id = h_path.stem

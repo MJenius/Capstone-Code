@@ -176,10 +176,10 @@ def main():
         is_perfect = np.array_equal(watermark_resized, descrambled)
         
         if is_perfect:
-            logging.info("✓ PERFECT RECONSTRUCTION VERIFIED")
+            logging.info("[OK] PERFECT RECONSTRUCTION VERIFIED")
         else:
             max_diff = np.max(np.abs(watermark_resized.astype(float) - descrambled.astype(float)))
-            logging.error(f"❌ RECONSTRUCTION FAILED! Max difference: {max_diff}")
+            logging.error(f"[FAIL] RECONSTRUCTION FAILED! Max difference: {max_diff}")
             return False
         
         # Summary
@@ -196,7 +196,7 @@ def main():
         logging.info(f"Metadata: watermark_{watermark_id}.json")
         
         logging.info("\n" + "=" * 80)
-        logging.info("✓ PHASE 2 COMPLETE - ALL TESTS PASSED")
+        logging.info("[OK] PHASE 2 COMPLETE - ALL TESTS PASSED")
         logging.info("=" * 80)
         
         return True
@@ -206,11 +206,17 @@ def main():
         return False
 
 
+def test_phase2_execution():
+    """Pytest test case for Phase 2 watermark scrambling."""
+    assert main() is True
+
+
 if __name__ == "__main__":
     success = main()
     if success:
-        print("\n✓ Phase 2 completed successfully!")
+        print("\n[OK] Phase 2 completed successfully!")
         print("Check data/scrambled/ for output files")
         print("Check preprocessed/metadata/ for watermark metadata")
     else:
-        print("\n❌ Phase 2 failed - check phase2_test.log for details")
+        print("\n[FAIL] Phase 2 failed - check phase2_test.log for details")
+

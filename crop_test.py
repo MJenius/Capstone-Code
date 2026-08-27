@@ -31,18 +31,24 @@ def main():
     
     ncs_crop_25 = []
     
-    for h_path in hosts:
-        host = np.load(h_path)
+    for seed, h_path in enumerate(hosts):
+        host = np.load(h_path).astype(np.float32)
         watermarked = embedder.embed(host, wm_mosaic)
         
-        atk = cropper.apply_attack(watermarked, mode='center', intensity=0.25)
+        atk = cropper.apply_attack(watermarked, mode='random', intensity=0.25, seed=seed)
+        mask = cropper.get_mask(mode='random', intensity=0.25, seed=seed)
         
         diff = (atk - host) / alpha_base + 0.5
-        tiles = [diff[i*32:(i+1)*32, j*32:(j+1)*32] for i in range(8) for j in range(8)]
-        recovered = np.mean(np.stack(tiles), axis=0)
+        tiles_diff = diff.reshape(8, 32, 8, 32).transpose(0, 2, 1, 3).reshape(64, 32, 32)
+        tiles_mask = mask.reshape(8, 32, 8, 32).transpose(0, 2, 1, 3).reshape(64, 32, 32)
+        sum_diff = np.sum(tiles_diff * tiles_mask, axis=0)
+        sum_weights = np.sum(tiles_mask, axis=0)
+        recovered = np.where(sum_weights > 0, sum_diff / (sum_weights + 1e-8), 0.5)
+        
         ncs_crop_25.append(calculate_nc(wm_catalan, recovered))
         
     print(f"Crop 25% NC: {np.mean(ncs_crop_25):.4f}")
+
 
 if __name__ == '__main__':
     main()

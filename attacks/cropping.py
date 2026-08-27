@@ -66,9 +66,14 @@ class CroppingAttack:
         if fill_val == 'zero':
             attacked[y0:y1, x0:x1] = 0.0
         else:
-            attacked[y0:y1, x0:x1] = np.random.normal(0.5, 0.2, (side, side))
+            if seed is not None:
+                rng_noise = np.random.RandomState(seed + 1000)
+                attacked[y0:y1, x0:x1] = rng_noise.normal(0.5, 0.2, (side, side))
+            else:
+                attacked[y0:y1, x0:x1] = np.random.normal(0.5, 0.2, (side, side))
             
         return np.clip(attacked, 0.0, 1.0)
+
 
     def get_mask(self, mode: str, intensity: float, seed: int = None) -> np.ndarray:
         """

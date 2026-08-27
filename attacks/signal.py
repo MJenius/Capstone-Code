@@ -25,11 +25,15 @@ class SignalAttack:
         decimg = cv2.imdecode(encimg, cv2.IMREAD_GRAYSCALE)
         return decimg.astype(np.float32) / 255.0
 
-    def apply_gaussian_noise(self, i_channel: np.ndarray, sigma: float = 0.05) -> np.ndarray:
+    def apply_gaussian_noise(self, i_channel: np.ndarray, sigma: float = 0.05, seed: Optional[int] = None) -> np.ndarray:
         """
         Add additive white Gaussian noise.
         """
-        noise = np.random.normal(0, sigma, i_channel.shape)
+        if seed is not None:
+            rng = np.random.RandomState(seed)
+            noise = rng.normal(0, sigma, i_channel.shape)
+        else:
+            noise = np.random.normal(0, sigma, i_channel.shape)
         return np.clip(i_channel + noise, 0.0, 1.0)
 
     def apply_median_blur(self, i_channel: np.ndarray, kernel_size: int = 3) -> np.ndarray:
@@ -47,14 +51,25 @@ class SignalAttack:
         blurred = cv2.GaussianBlur(i_channel, (kernel_size, kernel_size), sigma)
         return np.clip(blurred, 0.0, 1.0)
 
-    def apply_random_signal_attack(self, i_channel: np.ndarray) -> np.ndarray:
+    def apply_random_signal_attack(self, i_channel: np.ndarray, seed: Optional[int] = None) -> np.ndarray:
         """
         Pick one random signal attack.
         """
-        choice = np.random.choice(['jpeg', 'noise', 'blur'])
-        if choice == 'jpeg':
-            return self.apply_jpeg(i_channel, quality=np.random.randint(40, 90))
-        elif choice == 'noise':
-            return self.apply_gaussian_noise(i_channel, sigma=np.random.uniform(0.01, 0.08))
+        if seed is not None:
+            rng = np.random.RandomState(seed)
+            choice = rng.choice(['jpeg', 'noise', 'blur'])
+            if choice == 'jpeg':
+                return self.apply_jpeg(i_channel, quality=int(rng.randint(40, 90)))
+            elif choice == 'noise':
+                return self.apply_gaussian_noise(i_channel, sigma=float(rng.uniform(0.01, 0.08)), seed=seed + 1)
+            else:
+                return self.apply_gaussian_blur(i_channel, kernel_size=3)
         else:
-            return self.apply_gaussian_blur(i_channel, kernel_size=3)
+            choice = np.random.choice(['jpeg', 'noise', 'blur'])
+            if choice == 'jpeg':
+                return self.apply_jpeg(i_channel, quality=np.random.randint(40, 90))
+            elif choice == 'noise':
+                return self.apply_gaussian_noise(i_channel, sigma=np.random.uniform(0.01, 0.08))
+            else:
+                return self.apply_gaussian_blur(i_channel, kernel_size=3)
+

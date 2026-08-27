@@ -43,18 +43,19 @@ def main():
         psnrs = []
         ncs_5 = []
         
-        for h_path in hosts:
-            host = np.load(h_path)
+        for idx, h_path in enumerate(hosts):
+            host = np.load(h_path).astype(np.float32)
             watermarked = embedder.embed(host, wm_mosaic)
             psnrs.append(psnr(host, watermarked, data_range=1.0))
             
+            rng = np.random.RandomState(idx * 100)
             versions = []
             for _ in range(5):
-                wm_shift = np.random.randint(0, 2, wm_catalan.shape).astype(np.float32)
-                wm_variant = np.tile(np.clip(wm_catalan.astype(np.float32) + wm_shift * 0.3, 0, 1), (8, 8))
+                wm_shift = rng.randint(0, 2, wm_catalan.shape).astype(np.float32)
+                wm_variant = np.tile(np.clip(wm_catalan.astype(np.float32) + wm_shift * 0.2, 0, 1), (8, 8))
                 versions.append(embedder.embed(host, wm_variant))
             
-            atk = colluder.simulate_collusion(versions, noise_std=0.0)
+            atk = colluder.simulate_collusion(versions, noise_std=0.0, seed=idx + 1)
             
             diff = (atk - host) / alpha_base + 0.5
             tiles = [diff[i*32:(i+1)*32, j*32:(j+1)*32] for i in range(8) for j in range(8)]
@@ -62,6 +63,7 @@ def main():
             ncs_5.append(calculate_nc(wm_catalan, recovered))
             
         print(f"alpha_base={alpha_base:.3f}, sensitivity={sensitivity:.1f} -> PSNR={np.mean(psnrs):.2f}, NC_N5={np.mean(ncs_5):.4f}")
+
 
 if __name__ == '__main__':
     main()

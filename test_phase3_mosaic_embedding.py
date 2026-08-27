@@ -122,9 +122,15 @@ def main() -> bool:
     return True
 
 
+def test_phase3_execution():
+    """Pytest test case for Phase 3 Catalan transform, mosaic, and embedding."""
+    assert main() is True
+
+
 if __name__ == '__main__':
     success = main()
     if success:
         print('\nPASS: Phase 3 + Mosaic + Embedding validation succeeded')
     else:
         print('\nFAIL: Phase 3 + Mosaic + Embedding validation failed')
+

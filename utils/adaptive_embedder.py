@@ -41,26 +41,28 @@ class AdaptiveEmbedder:
         watermark_mosaic: np.ndarray
     ) -> np.ndarray:
         """
-        Perceptually adaptive embedding.
+        Perceptually adaptive embedding using local luminance-texture masking.
+
+        Embedding formula:
+            alpha_pixel = alpha_base * (1.0 + sensitivity * mask)
+            embedded = host + alpha_pixel * (watermark - 0.5)
+
+        Args:
+            i_channel: 2D Host I-channel array normalized to [0, 1]
+            watermark_mosaic: 2D Watermark mosaic array matching host shape
+
+        Returns:
+            Watermarked image clipped to [0, 1]
         """
-        # 1. Get texture mask
+        # 1. Compute normalized texture mask from local variance [0, 1]
         mask = self.get_texture_mask(i_channel)
         
-        # 1b. Create a spatial weight map (Gaussian) that emphasizes the center
-        h, w = i_channel.shape
-        y, x = np.ogrid[-h/2:h/2, -w/2:w/2]
-        # Gaussian with sigma = h/2, amplitude = 1 at center, ~0.6 at edge
-        spatial_weight = np.exp(-(x**2 + y**2) / (2 * (h/2)**2))
-        # Scale to [1.0, 1.5]
-        spatial_weight = 1.0 + 0.5 * spatial_weight
+        # 2. Calculate pixel-wise embedding strength alpha
+        # Flat/smooth regions (mask -> 0) use alpha_base to preserve visual quality
+        # Textured/edge regions (mask -> 1) use alpha_base * (1 + sensitivity)
+        alpha_pixel = self.alpha_base * (1.0 + self.sensitivity * mask)
         
-        # 2. Calculate pixel-wise alpha
-        # Smooth areas (mask~0) get alpha_base
-        # Textured areas (mask~1) get alpha_base * (1 + sensitivity)
-        # Then multiply by the spatial weight to bump the center
-        alpha_pixel = self.alpha_base * (1.0 + self.sensitivity * mask) * spatial_weight
-        
-        # 3. Embed
+        # 3. Additive embedding with centered bipolar watermark
         host = i_channel.astype(np.float32)
         wm = watermark_mosaic.astype(np.float32)
         if wm.max() > 1.0 or wm.min() < 0.0:
@@ -69,3 +71,4 @@ class AdaptiveEmbedder:
         
         embedded = host + (alpha_pixel * wm_centered)
         return np.clip(embedded, 0.0, 1.0)
+

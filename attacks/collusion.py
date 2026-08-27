@@ -3,7 +3,7 @@ Collusion attack engine (Type I: Averaging).
 """
 import numpy as np
 import logging
-from typing import List
+from typing import List, Optional
 
 class CollusionAttack:
     """
@@ -15,7 +15,8 @@ class CollusionAttack:
     def simulate_collusion(
         self, 
         watermarked_images: List[np.ndarray], 
-        noise_std: float = 0.01
+        noise_std: float = 0.01,
+        seed: Optional[int] = None
     ) -> np.ndarray:
         """
         Average multiple watermarked images and add slight noise.
@@ -23,6 +24,7 @@ class CollusionAttack:
         Args:
             watermarked_images: List of N watermarked I-channels
             noise_std: Standard deviation of Gaussian noise to add
+            seed: Optional random seed for reproducible collaborative noise
             
         Returns:
             Averaged and slightly noisy I-channel
@@ -35,7 +37,12 @@ class CollusionAttack:
         
         # Add slight Gaussian noise to simulate real-world collaborative removal
         if noise_std > 0:
-            noise = np.random.normal(0, noise_std, colluded.shape)
+            if seed is not None:
+                rng = np.random.RandomState(seed)
+                noise = rng.normal(0, noise_std, colluded.shape)
+            else:
+                noise = np.random.normal(0, noise_std, colluded.shape)
             colluded = colluded + noise
             
         return np.clip(colluded, 0.0, 1.0)
+

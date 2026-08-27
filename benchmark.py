@@ -1,194 +1,314 @@
 """
-Benchmarking script to evaluate Hybrid Framework vs Baseline.
+Standardized Pre-ANN Baseline Benchmarking Suite.
+
+Evaluates the Hybrid Framework (Dual Scrambling + 8x8 Mosaic + Perceptual Adaptive Embedding)
+versus the Baseline Non-Blind Watermarking method on a fixed test split.
+
+Metrics reported:
+- Imperceptibility: PSNR (dB), SSIM
+- Robustness: Normalized Correlation (NC), Bit Error Rate (BER)
+
+Attacks evaluated:
+- No Attack (Fidelity & baseline recovery)
+- Cropping: 10%, 25%, 50% (Center and Seeded Random crops)
+- Signal Processing: JPEG (Q=50, 70), Gaussian Noise (sigma=0.05), Gaussian Blur (kernel=3)
+- Collusion (Collaborative averaging): N = 2, 5, 10, 20, 50, 100
 """
-import os
 import json
 import logging
-import numpy as np
 from pathlib import Path
-from tqdm import tqdm
+from typing import Dict, List, Optional
+import numpy as np
 from skimage.metrics import peak_signal_noise_ratio as psnr
 from skimage.metrics import structural_similarity as ssim
+from tqdm import tqdm
 
 from attacks.cropping import CroppingAttack
+from attacks.signal import SignalAttack
 from attacks.collusion import CollusionAttack
-from utils.baseline import NormalEmbedder
 from utils.adaptive_embedder import AdaptiveEmbedder
+from utils.baseline import NormalEmbedder
 
-# Configure logging
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
-def calculate_nc(w1, w2):
-    """Normalize Correlation between two watermarks."""
-    w1 = w1.astype(np.float32).flatten()
-    w2 = w2.astype(np.float32).flatten()
-    # Normalize to zero mean for better correlation measure if binary
-    w1 = w1 - np.mean(w1)
-    w2 = w2 - np.mean(w2)
-    denom = (np.sqrt(np.sum(w1**2) * np.sum(w2**2)))
-    if denom == 0: return 0
-    return np.sum(w1 * w2) / denom
 
-def calculate_ber(w_orig, w_extr):
-    """Bit Error Rate after thresholding."""
+def calculate_nc(w1: np.ndarray, w2: np.ndarray) -> float:
+    """
+    Calculate Normalized Correlation (NC) between ground-truth and recovered watermarks.
+    Zero-mean normalized correlation is used for fair invariant alignment.
+    """
+    w1_f = w1.astype(np.float32).flatten()
+    w2_f = w2.astype(np.float32).flatten()
+    w1_m = w1_f - np.mean(w1_f)
+    w2_m = w2_f - np.mean(w2_f)
+    denom = np.sqrt(np.sum(w1_m ** 2) * np.sum(w2_m ** 2))
+    if denom < 1e-12:
+        return 0.0
+    return float(np.sum(w1_m * w2_m) / (denom + 1e-8))
+
+
+def calculate_ber(w_orig: np.ndarray, w_extr: np.ndarray) -> float:
+    """
+    Calculate Bit Error Rate (BER) after 0.5 thresholding.
+    """
     w1 = (w_orig > 0.5).astype(np.int32)
     w2 = (w_extr > 0.5).astype(np.int32)
-    errors = np.sum(w1 != w2)
-    return errors / w1.size
+    return float(np.sum(w1 != w2) / w1.size)
 
-class Benchmarker:
-    def __init__(self, alpha_base=0.012, sensitivity=2.0):
+
+class PreANNBenchmarker:
+    """
+    Comprehensive, reproducible Pre-ANN baseline benchmarker.
+    """
+
+    def __init__(self, alpha_base: float = 0.012, sensitivity: float = 2.0, base_alpha: float = 0.08):
+        self.base_dir = Path.cwd()
         self.alpha_base = alpha_base
         self.sensitivity = sensitivity
-        self.cropping_engine = CroppingAttack()
-        self.collusion_engine = CollusionAttack()
-        self.baseline_embedder = NormalEmbedder(alpha=0.08)
-        # Adaptive embedder for hybrid collusion simulation (embeds 256x256 mosaic)
+        self.base_alpha = base_alpha
+
+        # Engines
         self.hybrid_embedder = AdaptiveEmbedder(alpha_base=alpha_base, sensitivity=sensitivity)
-        
+        self.baseline_embedder = NormalEmbedder(alpha=base_alpha)
+        self.cropper = CroppingAttack(target_size=256)
+        self.signaller = SignalAttack()
+        self.colluder = CollusionAttack()
+
         # Paths
-        self.base_dir = Path.cwd()
         self.host_dir = self.base_dir / 'preprocessed' / 'I_channel'
-        self.hybrid_dir = self.base_dir / 'preprocessed' / 'embedded_I_channel'
+        self.splits_file = self.base_dir / 'splits' / 'test.txt'
         self.wm_binary_path = self.base_dir / 'data' / 'watermark' / 'watermark_binary.npy'
-        self.wm_catalan_path = sorted(list((self.base_dir / 'data' / 'catalan').glob('*.npy')))[0] if (self.base_dir / 'data' / 'catalan').exists() else None
         
-        # Load ground truth watermarks
-        self.wm_binary = np.load(self.wm_binary_path) if self.wm_binary_path.exists() else None
-        self.wm_catalan = np.load(self.wm_catalan_path) if self.wm_catalan_path else None
+        catalan_dir = self.base_dir / 'data' / 'catalan'
+        catalan_files = sorted(list(catalan_dir.glob('*.npy'))) if catalan_dir.exists() else []
+        self.wm_catalan_path = catalan_files[0] if catalan_files else None
 
-    def extract_non_blind(self, attacked, host, alpha=None):
+        # Load watermarks
+        if not self.wm_binary_path.exists():
+            raise FileNotFoundError(f"Missing binary watermark: {self.wm_binary_path}")
+        if not self.wm_catalan_path or not self.wm_catalan_path.exists():
+            raise FileNotFoundError(f"Missing Catalan watermark in {catalan_dir}")
+
+        self.wm_binary = np.load(self.wm_binary_path)
+        self.wm_catalan = np.load(self.wm_catalan_path)
+        self.wm_mosaic = np.tile(self.wm_catalan, (8, 8))
+
+    def extract_hybrid_non_blind(
+        self, attacked: np.ndarray, host: np.ndarray, mask: Optional[np.ndarray] = None
+    ) -> np.ndarray:
         """
-        Simple non-blind extraction: inverts additive embedding `w = h + alpha*(wm - 0.5)`.
+        Non-blind extraction for Hybrid Mosaic Framework.
+        Inverts host difference and aggregates surviving mosaic tiles.
+        """
+        diff = (attacked - host) / self.alpha_base + 0.5
+        tiles_diff = diff.reshape(8, 32, 8, 32).transpose(0, 2, 1, 3).reshape(64, 32, 32)
         
-        NOTE: For the hybrid AdaptiveEmbedder the effective alpha is pixel-wise, so a
-        single scalar inversion is an approximation.
-        """
-        a = alpha if alpha is not None else self.alpha_base
-        diff = (attacked - host) / a
-        return diff + 0.5
+        if mask is not None:
+            tiles_mask = mask.reshape(8, 32, 8, 32).transpose(0, 2, 1, 3).reshape(64, 32, 32)
+            sum_diff = np.sum(tiles_diff * tiles_mask, axis=0)
+            sum_weights = np.sum(tiles_mask, axis=0)
+            return np.where(sum_weights > 0, sum_diff / (sum_weights + 1e-8), 0.5)
+        
+        return np.mean(tiles_diff, axis=0)
 
-    def run_benchmark(self, num_images=10):
+    def extract_baseline_non_blind(
+        self, attacked: np.ndarray, host: np.ndarray
+    ) -> np.ndarray:
+        """
+        Non-blind extraction for Baseline (center 32x32 region).
+        """
+        diff = attacked - host
+        raw = diff[112:144, 112:144] / self.base_alpha + 0.5
+        return np.clip(raw, 0.0, 1.0)
+
+    def get_test_image_ids(self, num_images: Optional[int] = None) -> List[str]:
+        """
+        Load fixed test set IDs from splits/test.txt.
+        """
+        if self.splits_file.exists():
+            ids = [line.strip() for line in self.splits_file.read_text().splitlines() if line.strip()]
+        else:
+            ids = [p.stem for p in sorted(self.host_dir.glob('*.npy'))]
+        
+        if num_images is not None:
+            ids = ids[:num_images]
+        return ids
+
+    def run_benchmark(
+        self,
+        num_images: Optional[int] = None,
+        results_path: str = 'benchmarking_results.json',
+        collusion_curve_path: str = 'collusion_curve.json'
+    ) -> List[Dict]:
+        """
+        Run the complete benchmark suite across the fixed test split.
+        """
+        test_ids = self.get_test_image_ids(num_images)
+        logging.info(f"Running benchmark on {len(test_ids)} test images...")
+
         results = []
-        hybrid_files = sorted(list(self.hybrid_dir.glob('*.npy')))[:num_images]
-        
-        if not hybrid_files:
-            logging.error("No hybrid watermarked images found!")
-            return
+        collusion_n_values = [2, 5, 10, 20, 50, 100]
+        collusion_curve_hybrid = {n: [] for n in collusion_n_values}
+        collusion_curve_base = {n: [] for n in collusion_n_values}
 
-        for h_path in tqdm(hybrid_files, desc="Benchmarking"):
-            img_id = h_path.stem
+        for img_idx, img_id in enumerate(tqdm(test_ids, desc="Benchmarking")):
             host_path = self.host_dir / f"{img_id}.npy"
-            
             if not host_path.exists():
                 continue
-                
-            host = np.load(host_path)
-            hybrid_w = np.load(h_path)
-            
-            # 1. Generate Baseline
-            baseline_w = self.baseline_embedder.embed(host, self.wm_binary)
-            
-            # Baseline No-Attack metrics
-            base_psnr = psnr(host, baseline_w, data_range=1.0)
-            base_ssim = ssim(host, baseline_w, data_range=1.0)
-            
-            # Hybrid No-Attack metrics
-            hybrid_psnr = psnr(host, hybrid_w, data_range=1.0)
-            hybrid_ssim = ssim(host, hybrid_w, data_range=1.0)
 
-            # --- Attacks ---
-            attacks = [
-                ('crop_10', 'cropping', {'mode': 'center', 'intensity': 0.1}),
-                ('crop_25', 'cropping', {'mode': 'center', 'intensity': 0.25}),
-                ('crop_50', 'cropping', {'mode': 'center', 'intensity': 0.5}),
-                ('collusion_5', 'collusion', {'n': 5}),
-            ]
+            host = np.load(host_path).astype(np.float32)
+
+            # 1. Embeddings
+            hybrid_w = self.hybrid_embedder.embed(host, self.wm_mosaic)
+            baseline_w = self.baseline_embedder.embed(host, self.wm_binary, visible=False)
+
+            # 2. Imperceptibility (No Attack)
+            h_psnr = float(psnr(host, hybrid_w, data_range=1.0))
+            h_ssim = float(ssim(host, hybrid_w, data_range=1.0))
+            b_psnr = float(psnr(host, baseline_w, data_range=1.0))
+            b_ssim = float(ssim(host, baseline_w, data_range=1.0))
+
+            # No-attack recovery
+            h_rec_clean = self.extract_hybrid_non_blind(hybrid_w, host)
+            b_rec_clean = self.extract_baseline_non_blind(baseline_w, host)
             
-            for atk_name, atk_type, params in attacks:
-                if atk_type == 'cropping':
-                    # Fix: stabilize cropping asymmetry by evaluating 5 random crop regions
-                    # instead of a deterministic center crop. This averages out grid alignment bias.
-                    h_ncs, b_ncs, h_bers, b_bers = [], [], [], []
-                    for seed in range(5):
-                        atk_hybrid = self.cropping_engine.apply_attack(hybrid_w, mode='random', intensity=params['intensity'], seed=seed)
-                        atk_base = self.cropping_engine.apply_attack(baseline_w, mode='random', intensity=params['intensity'], seed=seed)
-                        
-                        extr_hybrid_raw = self.extract_non_blind(atk_hybrid, host, alpha=self.alpha_base)
-                        extr_base_raw = np.clip((atk_base - host) / 0.4 + 0.5, 0, 1)
-                        tiles = [extr_hybrid_raw[i*32:(i+1)*32, j*32:(j+1)*32] for i in range(8) for j in range(8)]
-                        hybrid_rec = np.mean(np.stack(tiles), axis=0)
-                        base_rec = extr_base_raw[112:144, 112:144]
-                        
-                        h_ncs.append(calculate_nc(self.wm_catalan, hybrid_rec))
-                        b_ncs.append(calculate_nc(self.wm_binary, base_rec))
-                        h_bers.append(calculate_ber(self.wm_catalan, hybrid_rec))
-                        b_bers.append(calculate_ber(self.wm_binary, base_rec))
-                        
-                    h_nc, b_nc = np.mean(h_ncs), np.mean(b_ncs)
-                    h_ber, b_ber = np.mean(h_bers), np.mean(b_bers)
-                    
-                    area_removed = params['intensity']
-                    crr = (1 - h_ber) / area_removed if area_removed > 0 else float('inf')
+            results.append({
+                "image_id": img_id,
+                "attack_type": "no_attack",
+                "hybrid_psnr": h_psnr,
+                "hybrid_ssim": h_ssim,
+                "hybrid_nc": calculate_nc(self.wm_catalan, h_rec_clean),
+                "hybrid_ber": calculate_ber(self.wm_catalan, h_rec_clean),
+                "baseline_psnr": b_psnr,
+                "baseline_ssim": b_ssim,
+                "baseline_nc": calculate_nc(self.wm_binary, b_rec_clean),
+                "baseline_ber": calculate_ber(self.wm_binary, b_rec_clean),
+            })
 
-                else: # collusion
-                    # Proper collusion simulation: each colluder has a DIFFERENT embedded
-                    # watermark variant so that averaging meaningfully degrades the signal.
-                    n = params['n']
-                    hybrid_versions, base_versions = [], []
-                    for _ in range(n):
-                        # Hybrid: 256x256 mosaic variant embedded with AdaptiveEmbedder
-                        wm_shift = np.random.randint(0, 2, self.wm_catalan.shape).astype(np.float32)
-                        wm_catalan_v = np.clip(self.wm_catalan.astype(np.float32) + wm_shift * 0.3, 0, 1)
-                        wm_mosaic_v = np.tile(wm_catalan_v, (8, 8))  # 256x256
-                        hybrid_versions.append(self.hybrid_embedder.embed(host, wm_mosaic_v))
-                        # Baseline: 32x32 binary variant embedded with NormalEmbedder (visible)
-                        wm_bin_v = np.clip(
-                            self.wm_binary.astype(np.float32) + np.random.randint(0, 2, self.wm_binary.shape).astype(np.float32) * 0.3,
-                            0, 1
-                        )
-                        base_versions.append(self.baseline_embedder.embed(host, wm_bin_v))
-                    atk_hybrid = self.collusion_engine.simulate_collusion(hybrid_versions)
-                    atk_base = self.collusion_engine.simulate_collusion(base_versions)
-                    area_removed = 0
+            # 3. Cropping Attacks (10%, 25%, 50%) — averaged over 5 fixed seeds
+            crop_intensities = [('crop_10', 0.10), ('crop_25', 0.25), ('crop_50', 0.50)]
+            for atk_name, intensity in crop_intensities:
+                h_ncs, b_ncs, h_bers, b_bers = [], [], [], []
+                for seed in range(5):
+                    seed_val = img_idx * 10 + seed
+                    atk_h = self.cropper.apply_attack(hybrid_w, mode='random', intensity=intensity, seed=seed_val)
+                    atk_b = self.cropper.apply_attack(baseline_w, mode='random', intensity=intensity, seed=seed_val)
+                    mask = self.cropper.get_mask(mode='random', intensity=intensity, seed=seed_val)
 
-                    # Extraction for collusion
-                    extr_hybrid_raw = self.extract_non_blind(atk_hybrid, host, alpha=self.alpha_base)
-                    extr_base_raw = np.clip((atk_base - host) / 0.4 + 0.5, 0, 1)
-                    
-                    tiles = []
-                    for i in range(8):
-                        for j in range(8):
-                            tiles.append(extr_hybrid_raw[i*32:(i+1)*32, j*32:(j+1)*32])
-                    hybrid_recovered = np.mean(np.stack(tiles), axis=0)
-                    base_recovered = extr_base_raw[112:144, 112:144]
-                    
-                    h_nc = calculate_nc(self.wm_catalan, hybrid_recovered)
-                    b_nc = calculate_nc(self.wm_binary, base_recovered)
-                    h_ber = calculate_ber(self.wm_catalan, hybrid_recovered)
-                    b_ber = calculate_ber(self.wm_binary, base_recovered)
-                    crr = 0.0
+                    rec_h = self.extract_hybrid_non_blind(atk_h, host, mask=mask)
+                    rec_b = self.extract_baseline_non_blind(atk_b, host)
+
+                    h_ncs.append(calculate_nc(self.wm_catalan, rec_h))
+                    b_ncs.append(calculate_nc(self.wm_binary, rec_b))
+                    h_bers.append(calculate_ber(self.wm_catalan, rec_h))
+                    b_bers.append(calculate_ber(self.wm_binary, rec_b))
 
                 results.append({
                     "image_id": img_id,
                     "attack_type": atk_name,
-                    "hybrid_nc": float(h_nc),
-                    "baseline_nc": float(b_nc),
-                    "hybrid_ber": float(h_ber),
-                    "baseline_ber": float(b_ber),
-                    "hybrid_psnr": float(hybrid_psnr),
-                    "hybrid_ssim": float(hybrid_ssim),
-                    "baseline_psnr": float(base_psnr),
-                    "baseline_ssim": float(base_ssim),
-                    "crr": float(crr)
+                    "hybrid_psnr": h_psnr,
+                    "hybrid_ssim": h_ssim,
+                    "hybrid_nc": float(np.mean(h_ncs)),
+                    "hybrid_ber": float(np.mean(h_bers)),
+                    "baseline_psnr": b_psnr,
+                    "baseline_ssim": b_ssim,
+                    "baseline_nc": float(np.mean(b_ncs)),
+                    "baseline_ber": float(np.mean(b_bers)),
                 })
 
-        # Save results
-        with open('benchmarking_results.json', 'w') as f:
+            # 4. Signal Processing Attacks
+            signal_attacks = [
+                ('jpeg_50', lambda img: self.signaller.apply_jpeg(img, quality=50)),
+                ('jpeg_70', lambda img: self.signaller.apply_jpeg(img, quality=70)),
+                ('noise_05', lambda img: self.signaller.apply_gaussian_noise(img, sigma=0.05, seed=img_idx + 100)),
+                ('blur_3', lambda img: self.signaller.apply_gaussian_blur(img, kernel_size=3)),
+            ]
+
+            for atk_name, atk_fn in signal_attacks:
+                atk_h = atk_fn(hybrid_w)
+                atk_b = atk_fn(baseline_w)
+
+                rec_h = self.extract_hybrid_non_blind(atk_h, host)
+                rec_b = self.extract_baseline_non_blind(atk_b, host)
+
+                results.append({
+                    "image_id": img_id,
+                    "attack_type": atk_name,
+                    "hybrid_psnr": h_psnr,
+                    "hybrid_ssim": h_ssim,
+                    "hybrid_nc": calculate_nc(self.wm_catalan, rec_h),
+                    "hybrid_ber": calculate_ber(self.wm_catalan, rec_h),
+                    "baseline_psnr": b_psnr,
+                    "baseline_ssim": b_ssim,
+                    "baseline_nc": calculate_nc(self.wm_binary, rec_b),
+                    "baseline_ber": calculate_ber(self.wm_binary, rec_b),
+                })
+
+            # 5. Collusion Attacks (N = 2, 5, 10, 20, 50, 100)
+            for n in collusion_n_values:
+                hybrid_variants, base_variants = [], []
+                rng_coll = np.random.RandomState(img_idx * 1000 + n)
+                
+                for k in range(n):
+                    # Seeded perturbation per colluder
+                    shift_cat = rng_coll.randint(0, 2, self.wm_catalan.shape).astype(np.float32)
+                    v_cat = np.clip(self.wm_catalan.astype(np.float32) + shift_cat * 0.2, 0, 1)
+                    v_mosaic = np.tile(v_cat, (8, 8))
+                    hybrid_variants.append(self.hybrid_embedder.embed(host, v_mosaic))
+
+                    shift_bin = rng_coll.randint(0, 2, self.wm_binary.shape).astype(np.float32)
+                    v_bin = np.clip(self.wm_binary.astype(np.float32) + shift_bin * 0.2, 0, 1)
+                    base_variants.append(self.baseline_embedder.embed(host, v_bin, visible=False))
+
+                atk_h = self.colluder.simulate_collusion(hybrid_variants, noise_std=0.01, seed=img_idx * 1000 + n + 7)
+                atk_b = self.colluder.simulate_collusion(base_variants, noise_std=0.01, seed=img_idx * 1000 + n + 7)
+
+                rec_h = self.extract_hybrid_non_blind(atk_h, host)
+                rec_b = self.extract_baseline_non_blind(atk_b, host)
+
+                h_nc_coll = calculate_nc(self.wm_catalan, rec_h)
+                b_nc_coll = calculate_nc(self.wm_binary, rec_b)
+                h_ber_coll = calculate_ber(self.wm_catalan, rec_h)
+                b_ber_coll = calculate_ber(self.wm_binary, rec_b)
+
+                collusion_curve_hybrid[n].append(h_nc_coll)
+                collusion_curve_base[n].append(b_nc_coll)
+
+                results.append({
+                    "image_id": img_id,
+                    "attack_type": f"collusion_{n}",
+                    "hybrid_psnr": h_psnr,
+                    "hybrid_ssim": h_ssim,
+                    "hybrid_nc": h_nc_coll,
+                    "hybrid_ber": h_ber_coll,
+                    "baseline_psnr": b_psnr,
+                    "baseline_ssim": b_ssim,
+                    "baseline_nc": b_nc_coll,
+                    "baseline_ber": b_ber_coll,
+                })
+
+        # Save main benchmarking results
+        with open(results_path, 'w') as f:
             json.dump(results, f, indent=4)
-        
-        logging.info("Benchmarking complete. Results saved to benchmarking_results.json")
+        logging.info(f"Saved benchmarking results ({len(results)} records) to {results_path}")
+
+        # Save collusion sensitivity curve
+        collusion_curve = [
+            {
+                "n": n,
+                "hybrid_nc": float(np.mean(collusion_curve_hybrid[n])),
+                "baseline_nc": float(np.mean(collusion_curve_base[n]))
+            }
+            for n in collusion_n_values
+        ]
+        with open(collusion_curve_path, 'w') as f:
+            json.dump(collusion_curve, f, indent=4)
+        logging.info(f"Saved collusion curve to {collusion_curve_path}")
+
+        return results
+
 
 if __name__ == "__main__":
-    benchmarker = Benchmarker()
-    benchmarker.run_benchmark(num_images=20)
+    benchmarker = PreANNBenchmarker()
+    # Evaluate across all images in test.txt
+    benchmarker.run_benchmark(num_images=None)

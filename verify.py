@@ -113,15 +113,18 @@ def main() -> bool:
         with open(embedding_metadata_path, 'r') as f:
             embedding_metadata = json.load(f)
 
-        required_keys = {
+        required_base_keys = {
             'image_id', 'watermark_id', 'acm_iterations', 'catalan_iterations',
-            'catalan_key', 'mosaic_shape', 'mosaic_grid', 'embedding_alpha',
+            'catalan_key', 'mosaic_shape', 'mosaic_grid',
             'embedded_i_path', 'host_i_min', 'host_i_max', 'embedded_i_min', 'embedded_i_max'
         }
-        missing = required_keys - set(embedding_metadata.keys())
-        if missing:
-            print(f"Embedding metadata missing keys: {sorted(missing)}")
+        has_alpha = ('embedding_alpha' in embedding_metadata) or ('embedding_alpha_base' in embedding_metadata)
+        missing = required_base_keys - set(embedding_metadata.keys())
+        if missing or not has_alpha:
+            missing_all = sorted(list(missing) + ([] if has_alpha else ['embedding_alpha/embedding_alpha_base']))
+            print(f"Embedding metadata missing keys: {missing_all}")
             return False
+
 
         print('\nEmbedding Metadata:')
         for key, value in embedding_metadata.items():
