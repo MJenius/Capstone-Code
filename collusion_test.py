@@ -33,14 +33,19 @@ def main():
     
     for idx, h_path in enumerate(hosts):
         host = np.load(h_path).astype(np.float32)
-        watermarked = embedder.embed(host, wm_mosaic)
         
+        # Standard fingerprinting collusion (N=5):
+        #   Colluder 0 = victim (original watermark)
+        #   Colluders 1..4 = independent random watermarks
         rng = np.random.RandomState(idx * 100)
         versions = []
-        for _ in range(5):
-            wm_shift = rng.randint(0, 2, wm_catalan.shape).astype(np.float32)
-            wm_variant = np.tile(np.clip(wm_catalan.astype(np.float32) + wm_shift * 0.2, 0, 1), (8, 8))
-            versions.append(embedder.embed(host, wm_variant))
+        for k in range(5):
+            if k == 0:
+                versions.append(embedder.embed(host, wm_mosaic))
+            else:
+                indep_wm = rng.rand(*wm_catalan.shape).astype(np.float32)
+                indep_mosaic = np.tile(indep_wm, (8, 8))
+                versions.append(embedder.embed(host, indep_mosaic))
         
         atk = colluder.simulate_collusion(versions, noise_std=0.01, seed=idx + 1)
         

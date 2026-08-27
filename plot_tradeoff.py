@@ -66,13 +66,18 @@ def main():
             watermarked = embedder.embed(host, wm_mosaic)
             psnrs.append(psnr(host, watermarked, data_range=1.0))
             
-            # Collusion N=5 (seeded)
+            # Collusion N=5 (standard fingerprinting model, seeded)
+            #   Colluder 0 = victim (original watermark)
+            #   Colluders 1..4 = independent random watermarks
             rng_coll = np.random.RandomState(idx * 100 + int(alpha * 1000))
             versions = []
-            for _ in range(5):
-                wm_shift = rng_coll.randint(0, 2, wm_catalan.shape).astype(np.float32)
-                wm_variant = np.tile(np.clip(wm_catalan.astype(np.float32) + wm_shift * 0.2, 0, 1), (8, 8))
-                versions.append(embedder.embed(host, wm_variant))
+            for k in range(5):
+                if k == 0:
+                    versions.append(embedder.embed(host, wm_mosaic))
+                else:
+                    indep_wm = rng_coll.rand(*wm_catalan.shape).astype(np.float32)
+                    indep_mosaic = np.tile(indep_wm, (8, 8))
+                    versions.append(embedder.embed(host, indep_mosaic))
             atk_coll = colluder.simulate_collusion(versions, noise_std=0.01, seed=idx + 50)
             
             rec_coll = extract_hybrid_masked(atk_coll - host, alpha)
@@ -107,9 +112,9 @@ def main():
             plt.annotate(f"$\\alpha={r[0]:.3f}$", (r[2], r[1]), textcoords="offset points", xytext=(0, 10), ha='center', fontsize=9)
             plt.annotate(f"$\\alpha={r[0]:.3f}$", (r[3], r[1]), textcoords="offset points", xytext=(0, -15), ha='center', fontsize=9)
             
-        plt.xlabel('Normalized Correlation (NC)', fontsize=11, fontweight='bold')
-        plt.ylabel('Imperceptibility (PSNR in dB)', fontsize=11, fontweight='bold')
-        plt.title('PSNR vs. Robustness Trade-off Curve', fontsize=13, fontweight='bold')
+        plt.xlabel('Normalized Correlation (NC) — Non-Blind Extraction', fontsize=11, fontweight='bold')
+        plt.ylabel('Clean Embedding PSNR (dB)', fontsize=11, fontweight='bold')
+        plt.title('PSNR vs. Robustness Trade-off (Pre-ANN Non-Blind Baseline)', fontsize=13, fontweight='bold')
         plt.grid(True, linestyle='--', alpha=0.6)
         plt.axhline(y=40.0, color='r', linestyle=':', linewidth=1.8, label='Imperceptibility Target (40 dB)')
         plt.legend(loc='lower left', framealpha=0.9)

@@ -245,20 +245,33 @@ class PreANNBenchmarker:
                 })
 
             # 5. Collusion Attacks (N = 2, 5, 10, 20, 50, 100)
+            #
+            # Standard fingerprinting collusion model:
+            #   - Colluder 0 ("victim"): embeds with the ORIGINAL watermark
+            #     (wm_catalan / wm_binary) — the one extraction compares against.
+            #   - Colluders 1..N-1: each embeds with a completely INDEPENDENT
+            #     random watermark (simulating unique fingerprints).
+            #   - All N watermarked copies are averaged, then slight noise is added.
+            #   - The victim's watermark signal is diluted to ~1/N of its original
+            #     strength, plus interference from (N-1) independent watermarks.
+            #
             for n in collusion_n_values:
                 hybrid_variants, base_variants = [], []
                 rng_coll = np.random.RandomState(img_idx * 1000 + n)
-                
-                for k in range(n):
-                    # Seeded perturbation per colluder
-                    shift_cat = rng_coll.randint(0, 2, self.wm_catalan.shape).astype(np.float32)
-                    v_cat = np.clip(self.wm_catalan.astype(np.float32) + shift_cat * 0.2, 0, 1)
-                    v_mosaic = np.tile(v_cat, (8, 8))
-                    hybrid_variants.append(self.hybrid_embedder.embed(host, v_mosaic))
 
-                    shift_bin = rng_coll.randint(0, 2, self.wm_binary.shape).astype(np.float32)
-                    v_bin = np.clip(self.wm_binary.astype(np.float32) + shift_bin * 0.2, 0, 1)
-                    base_variants.append(self.baseline_embedder.embed(host, v_bin, visible=False))
+                for k in range(n):
+                    if k == 0:
+                        # Victim: embed with the exact original watermark
+                        hybrid_variants.append(self.hybrid_embedder.embed(host, self.wm_mosaic))
+                        base_variants.append(self.baseline_embedder.embed(host, self.wm_binary, visible=False))
+                    else:
+                        # Other colluders: completely independent random watermarks
+                        indep_wm_cat = rng_coll.rand(*self.wm_catalan.shape).astype(np.float32)
+                        indep_mosaic = np.tile(indep_wm_cat, (8, 8))
+                        hybrid_variants.append(self.hybrid_embedder.embed(host, indep_mosaic))
+
+                        indep_wm_bin = rng_coll.rand(*self.wm_binary.shape).astype(np.float32)
+                        base_variants.append(self.baseline_embedder.embed(host, indep_wm_bin, visible=False))
 
                 atk_h = self.colluder.simulate_collusion(hybrid_variants, noise_std=0.01, seed=img_idx * 1000 + n + 7)
                 atk_b = self.colluder.simulate_collusion(base_variants, noise_std=0.01, seed=img_idx * 1000 + n + 7)
