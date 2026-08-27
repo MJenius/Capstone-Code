@@ -4,6 +4,7 @@ verification/
 benchmarking_results*.json
 collusion_curve.json
 study_comparison_metrics.json
+scratch/
 
 # Image data (Datasets and generated artifacts)
 DIV2K.tar
@@ -33,6 +34,7 @@ venv/
 build/
 dist/
 *.egg-info/
+.pytest_cache/
 
 # IDEs
 .vscode/

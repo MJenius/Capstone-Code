@@ -81,6 +81,18 @@ def test_adaptive_embedder_fidelity():
     assert score_ssim >= 0.98
 
 
+def test_baseline_embedder_fidelity():
+    from utils.baseline import NormalEmbedder
+    embedder = NormalEmbedder(alpha=0.08)
+    host = np.full((256, 256), 0.5, dtype=np.float32)
+    wm = np.random.RandomState(42).randint(0, 2, (32, 32)).astype(np.float32)
+    embedded = embedder.embed(host, wm, visible=False)
+    assert embedded.shape == (256, 256)
+    assert embedded.min() >= 0.0 and embedded.max() <= 1.0
+    score_psnr = psnr(host, embedded, data_range=1.0)
+    assert score_psnr >= 40.0
+
+
 
 def test_cropping_attack_and_mask_reproducibility():
     cropper = CroppingAttack(target_size=256)

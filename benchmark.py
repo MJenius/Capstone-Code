@@ -14,6 +14,7 @@ Attacks evaluated:
 - Signal Processing: JPEG (Q=50, 70), Gaussian Noise (sigma=0.05), Gaussian Blur (kernel=3)
 - Collusion (Collaborative averaging): N = 2, 5, 10, 20, 50, 100
 """
+import argparse
 import json
 import logging
 from pathlib import Path
@@ -321,7 +322,28 @@ class PreANNBenchmarker:
         return results
 
 
+def main():
+    parser = argparse.ArgumentParser(description="Standardized Pre-ANN Baseline Benchmarking Suite")
+    parser.add_argument("--num_images", type=int, default=None, help="Number of test images to evaluate (default: all in test.txt)")
+    parser.add_argument("--results_path", type=str, default="benchmarking_results.json", help="Path to save benchmarking results JSON")
+    parser.add_argument("--collusion_curve_path", type=str, default="collusion_curve.json", help="Path to save collusion curve JSON")
+    parser.add_argument("--alpha_base", type=float, default=0.012, help="Base alpha for AdaptiveEmbedder")
+    parser.add_argument("--sensitivity", type=float, default=2.0, help="Texture sensitivity for AdaptiveEmbedder")
+    parser.add_argument("--base_alpha", type=float, default=0.08, help="Alpha for Baseline NormalEmbedder")
+    args = parser.parse_args()
+
+    benchmarker = PreANNBenchmarker(
+        alpha_base=args.alpha_base,
+        sensitivity=args.sensitivity,
+        base_alpha=args.base_alpha
+    )
+    benchmarker.run_benchmark(
+        num_images=args.num_images,
+        results_path=args.results_path,
+        collusion_curve_path=args.collusion_curve_path
+    )
+
+
 if __name__ == "__main__":
-    benchmarker = PreANNBenchmarker()
-    # Evaluate across all images in test.txt
-    benchmarker.run_benchmark(num_images=None)
+    main()
+

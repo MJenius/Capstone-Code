@@ -4,7 +4,7 @@
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![OpenCV](https://img.shields.io/badge/OpenCV-4.8.0-green.svg)](https://opencv.org/)
 [![Status](https://img.shields.io/badge/Phase-Pre--ANN%20Baseline-orange.svg)](https://github.com/)
-[![Tests](https://img.shields.io/badge/pytest-passing-brightgreen.svg)](https://github.com/)
+[![Tests](https://img.shields.io/badge/pytest-12%20passed-brightgreen.svg)](https://github.com/)
 
 ## 📖 Overview
 This repository implements a **Hybrid Digital Image Watermarking Framework** combining dual chaotic scrambling (Arnold + Catalan) with spatially redundant 8×8 mosaic distribution and perceptual adaptive embedding. This phase establishes a rigorous, reproducible **Non-Blind (Host-Subtracted) Baseline** for subsequent deep learning (ANN) optimization.
@@ -92,15 +92,19 @@ These metrics measure watermarked-image quality against the original host (no at
 
 2. **Run Unit & Integration Tests**
    ```bash
-   python -m pytest
+   python -m pytest -v
    python verify.py
-   python test_phase2.py
-   python test_phase3_mosaic_embedding.py
    ```
 
 3. **Run Full Reproducible Benchmark**
    ```bash
+   # Run full 165-image test split evaluation
    python benchmark.py
+
+   # Or run a quick smoke test on 5 images
+   python benchmark.py --num_images 5
+
+   # Print formatted summary table
    python summarise_results.py
    ```
 
@@ -110,14 +114,49 @@ These metrics measure watermarked-image quality against the original host (no at
    python plot_tradeoff.py
    ```
 
+5. **Generate Phase-3 Training Dataset**
+   ```bash
+   python create_training_data.py
+   ```
+
 ## 📂 Project Structure
 
-- `attacks/`: Cropping, Collusion, and Signal attack engine implementations.
-- `utils/`: Adaptive embedder, Catalan permutation, Arnold scrambler, and metadata manager.
-- `preprocessed/`: Normalized YIQ I-channel host data and embedded previews.
-- `splits/`: Fixed `train.txt`, `val.txt`, and `test.txt` dataset splits.
-- `training_data/`: Dataset pair generation module for future Phase-3 ANN extraction.
-- `tests/`: Automated unit tests for transformation, embedding, attacks, and metrics.
+```
+Capstone-Code/
+├── attacks/                        # Attack engines (Cropping, Signal, Collusion)
+│   ├── __init__.py
+│   ├── collusion.py
+│   ├── cropping.py
+│   └── signal.py
+├── utils/                          # Core algorithms & data utilities
+│   ├── __init__.py
+│   ├── adaptive_embedder.py        # Perceptual texture-luminance adaptive embedder
+│   ├── baseline.py                 # Center single-tile baseline embedder
+│   ├── catalan.py                  # Blake2b-keyed Catalan permutation
+│   ├── downloader.py               # DIV2K dataset downloader
+│   ├── loader.py                   # Image loading & validation
+│   ├── metadata_mgr.py             # Metadata and split management
+│   ├── mosaic.py                   # 8x8 Mosaic tile generator
+│   ├── processor.py                # YIQ conversion & normalization
+│   └── scrambler.py                # Arnold Cat Map scrambler
+├── tests/                          # Automated Pytest suite
+│   ├── __init__.py
+│   ├── test_components.py          # Unit tests for transforms, embedders, attacks
+│   └── test_pipeline.py            # Integration tests for end-to-end roundtrip
+├── data/                           # Watermark & dataset inputs
+├── preprocessed/                   # Normalized YIQ I-channel host data & previews
+├── splits/                         # Fixed train / val / test dataset splits
+├── benchmark.py                    # Unified Pre-ANN baseline benchmarker (CLI & API)
+├── create_training_data.py         # Phase-3 training pair generator
+├── generate_watermark.py           # Canonical binary watermark generator
+├── main.py                         # Complete end-to-end preprocessing pipeline
+├── plot_collusion_curve.py         # Collusion sensitivity curve plotting
+├── plot_tradeoff.py                # PSNR vs NC trade-off curve plotting
+├── summarise_results.py            # Comparison table report printer
+├── verify.py                       # Data integrity verification script
+├── visualize_rgb_reconstruction.py # RGB domain watermarked preview tool
+└── collusion_analysis.html         # Interactive web visualization dashboard
+```
 
 ## 🎓 Academic Context
 This project is part of a Capstone research study on robust digital image watermarking. This phase establishes the authoritative **Non-Blind Baseline** prior to developing the blind ANN extractor in Phase 3. The non-blind results represent theoretical upper bounds for host-subtracted extraction and should not be compared directly with blind extraction performance.

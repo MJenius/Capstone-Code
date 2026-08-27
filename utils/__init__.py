@@ -1,5 +1,5 @@
 """
-Utilities package for data preprocessing pipeline.
+Utilities package for hybrid digital image watermarking framework.
 """
 from .downloader import DatasetDownloader
 from .loader import ImageLoader
@@ -8,7 +8,8 @@ from .metadata_mgr import MetadataManager, create_splits
 from .scrambler import WatermarkScrambler
 from .catalan import CatalanTransform
 from .mosaic import MosaicGenerator
-from .embedder import WatermarkEmbedder
+from .adaptive_embedder import AdaptiveEmbedder
+from .baseline import NormalEmbedder
 
 __all__ = [
     'DatasetDownloader',
@@ -19,5 +20,6 @@ __all__ = [
     'WatermarkScrambler',
     'CatalanTransform',
     'MosaicGenerator',
-    'WatermarkEmbedder'
+    'AdaptiveEmbedder',
+    'NormalEmbedder',
 ]
