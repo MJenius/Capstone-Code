@@ -1,0 +1,133 @@
+[
+  {
+    "component": "Dataset Loading & Preprocessing",
+    "status": "completed",
+    "files": [
+      "utils/downloader.py",
+      "utils/loader.py",
+      "utils/processor.py",
+      "utils/metadata_mgr.py",
+      "core/preprocessing.py"
+    ],
+    "entry_point": "python run.py --phase preprocessing",
+    "input": "data/raw/div2k (PNG images)",
+    "output": "preprocessed/rgb_256, preprocessed/I_channel, preprocessed/metadata, results/phase1_preprocessing/",
+    "metrics": ["i_channel_min", "i_channel_max", "dimensions"],
+    "notes": "Downloads DIV2K, converts RGB/BGR to YIQ color space, extracts I-channel, and min-max normalizes to [0, 1]."
+  },
+  {
+    "component": "Dual-Security Watermark Transformations",
+    "status": "completed",
+    "files": [
+      "generate_watermark.py",
+      "utils/scrambler.py",
+      "utils/catalan.py",
+      "utils/mosaic.py",
+      "core/watermark.py"
+    ],
+    "entry_point": "python run.py --phase watermark",
+    "input": "32x32 binary watermark (text: PW26_PAC_01 or file)",
+    "output": "data/scrambled, data/catalan, data/mosaic, results/phase2_watermark/",
+    "metrics": ["NC", "BER", "exact_match", "bit_errors"],
+    "notes": "Arnold Cat Map (10 iter) spatial scrambling + Catalan permutation (5 iter, key=7) using Blake2b hashed ordering + 8x8 mosaic expansion to 256x256 (64 repeated tiles). Exact mathematical reversibility validated (BER=0.0, NC=1.0)."
+  },
+  {
+    "component": "Perceptual Texture-Adaptive Embedding",
+    "status": "completed",
+    "files": [
+      "utils/adaptive_embedder.py",
+      "utils/baseline.py",
+      "core/embedding.py"
+    ],
+    "entry_point": "python run.py --phase embedding",
+    "input": "Host normalized I-channel (256x256) and 8x8 watermark mosaic (256x256)",
+    "output": "preprocessed/embedded_I_channel, results/phase3_embedding/",
+    "metrics": ["PSNR (dB)", "SSIM", "alpha_min", "alpha_max", "alpha_mean"],
+    "notes": "Computes local variance texture mask: alpha_pixel = alpha_base * (1.0 + sensitivity * mask). Embeds centered watermark: embedded = host + alpha_pixel * (wm - 0.5). High imperceptibility achieved (PSNR > 41 dB, SSIM > 0.996)."
+  },
+  {
+    "component": "Attack Engine Suite",
+    "status": "completed",
+    "files": [
+      "attacks/cropping.py",
+      "attacks/signal.py",
+      "attacks/collusion.py",
+      "core/attacks.py"
+    ],
+    "entry_point": "python run.py --phase attacks --attack <crop|jpeg|noise|blur|collusion>",
+    "input": "Watermarked 2D I-channel (256x256)",
+    "output": "results/phase4_attacks/<attack_name>/",
+    "metrics": ["attack_intensity", "mask_area_kept", "crop_retained_pct", "quality_factor", "noise_sigma", "kernel_size", "colluders_N"],
+    "notes": "Standardized attack suite: Cropping (center, random, quadrant; 10%, 25%, 50%), Signal (JPEG Q=50/70, Gaussian Noise sigma=0.05, Gaussian Blur k=3), and Averaging Collusion (N=2, 5, 10, 20, 50, 100). Fully reproducible with deterministic seeds."
+  },
+  {
+    "component": "Non-Blind Host-Subtracted Extraction",
+    "status": "completed",
+    "files": [
+      "benchmark.py",
+      "core/extraction.py",
+      "core/evaluation.py"
+    ],
+    "entry_point": "python run.py --phase extraction",
+    "input": "Attacked I-channel, original host I-channel, attack crop mask (if cropped)",
+    "output": "results/phase5_extraction/",
+    "metrics": ["NC", "BER", "bit_errors", "recovery_success"],
+    "notes": "Non-blind residual: diff = (attacked - host) / alpha_base + 0.5. Tiles 64 32x32 blocks with mask weighting, thresholds to binary, and applies inverse Catalan + inverse Arnold to recover original 32x32 watermark."
+  },
+  {
+    "component": "Standardized Baseline Benchmarking Suite",
+    "status": "completed",
+    "files": [
+      "benchmark.py",
+      "summarise_results.py",
+      "plot_collusion_curve.py",
+      "plot_tradeoff.py",
+      "core/evaluation.py"
+    ],
+    "entry_point": "python run.py --phase benchmark",
+    "input": "165 DIV2K test images from splits/test.txt",
+    "output": "results/phase6_benchmark/, benchmarking_results.json, collusion_curve.json",
+    "metrics": ["PSNR", "SSIM", "NC_by_attack", "BER_by_attack", "Collusion_curve"],
+    "notes": "Evaluates 14 attack conditions across all 165 test images for both Hybrid Framework and Center-Tile Baseline. Verifies mosaic redundancy advantage under cropping (NC > 0.99 at 50% crop) and noise averaging."
+  },
+  {
+    "component": "Automated Validation & Unit Testing",
+    "status": "completed",
+    "files": [
+      "tests/test_components.py",
+      "tests/test_pipeline.py",
+      "verify.py"
+    ],
+    "entry_point": "python run.py --phase tests",
+    "input": "Synthetic and sample image arrays",
+    "output": "results/phase7_tests/test_report.json, results/phase7_tests/test_report.md",
+    "metrics": ["test_pass_count", "test_fail_count", "test_duration_s"],
+    "notes": "Pytest suite verifying component reversibility, embedder fidelity, attack reproducibility, pipeline roundtrip, cropping resilience, and benchmark smoke tests."
+  },
+  {
+    "component": "ANN Dataset Generation",
+    "status": "completed",
+    "files": [
+      "create_training_data.py",
+      "pipeline/phase8_ann_data.py"
+    ],
+    "entry_point": "python run.py --phase ann-data",
+    "input": "Preprocessed I-channels (data/preprocessed)",
+    "output": "results/phase8_ann_data/, training_data/inputs, training_data/labels, metadata.csv",
+    "metrics": ["num_samples", "attack_distribution", "input_shape", "label_shape"],
+    "notes": "Generates (distorted I-channel, clean recovered watermark signal) training pairs for future neural network blind extractor training with attack metadata logging."
+  },
+  {
+    "component": "ANN Blind Watermark Extractor",
+    "status": "planned",
+    "files": [
+      "core/ann_interface.py",
+      "pipeline/phase9_ann.py"
+    ],
+    "entry_point": "python run.py --phase ann-train (or python run.py --phase ann-eval)",
+    "input": "Attacked watermarked I-channel without host image (256x256)",
+    "output": "results/phase9_ann/ (Model checkpoints, blind extraction metrics)",
+    "metrics": ["Validation Loss", "Blind NC", "Blind BER"],
+    "notes": "PLANNED / REMAINING — The deep neural network for blind watermark extraction without original host image is not yet implemented. Structural interfaces and training harnesses are defined, but the neural model weights and architecture are pending future capstone work."
+  }
+]

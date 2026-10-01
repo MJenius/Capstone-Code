@@ -1,0 +1,39 @@
+{
+  "title": "Phase 8 \u2014 ANN Dataset Preparation Report",
+  "phase": "Phase 8",
+  "timestamp": "2026-10-01T12:38:50.011775",
+  "summary": "Generated 5 verified (input, label) training pairs for future ANN training.",
+  "metrics": {
+    "generated_samples_count": {
+      "val": 5,
+      "desc": "Measured count of generated training pairs"
+    },
+    "attack_distribution": {
+      "val": {
+        "noise": 3,
+        "blur": 1,
+        "crop": 1
+      },
+      "desc": "Attack type frequency"
+    },
+    "sample_shape": {
+      "val": [
+        256,
+        256
+      ],
+      "desc": "Input channel dimensions"
+    },
+    "label_shape": {
+      "val": [
+        256,
+        256
+      ],
+      "desc": "Target clean signal dimensions"
+    }
+  },
+  "artifacts": [
+    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\phase8_ann_data\\metadata.csv",
+    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\phase8_ann_data\\dataset_summary.json",
+    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\phase8_ann_data\\visualizations"
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "title": "Phase 1 \u2014 Image Preprocessing Report",
+  "phase": "Phase 1",
+  "timestamp": "2026-10-01T12:41:29.415599",
+  "summary": "Image 0001 successfully resized to 256x256, transformed to NTSC YIQ color space, and I-channel normalized to [0, 1].",
+  "metrics": {
+    "original_shape": {
+      "val": [
+        1404,
+        2040,
+        3
+      ],
+      "desc": "Original image dimensions"
+    },
+    "resized_shape": {
+      "val": [
+        256,
+        256,
+        3
+      ],
+      "desc": "Resized image dimensions"
+    },
+    "i_channel_min_raw": {
+      "val": -68.7459945678711,
+      "desc": "Raw physical I-channel minimum"
+    },
+    "i_channel_max_raw": {
+      "val": 84.9020004272461,
+      "desc": "Raw physical I-channel maximum"
+    },
+    "i_channel_norm_min": {
+      "val": 0.0,
+      "desc": "Normalized minimum"
+    },
+    "i_channel_norm_max": {
+      "val": 1.0,
+      "desc": "Normalized maximum"
+    }
+  },
+  "artifacts": [
+    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\phase1_preprocessing\\phase1_preprocessing_grid.png",
+    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\phase1_preprocessing\\report.json"
+  ]
+}

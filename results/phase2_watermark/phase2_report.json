@@ -1,0 +1,65 @@
+{
+  "title": "Phase 2 \u2014 Watermark Transformation & Reversibility Report",
+  "phase": "Phase 2",
+  "timestamp": "2026-10-01T12:41:39.614119",
+  "summary": "Dual Arnold Cat Map and Blake2b-hashed Catalan transforms executed. Exact bit-level reversibility verified.",
+  "metrics": {
+    "dimensions": {
+      "val": [
+        32,
+        32
+      ],
+      "desc": "Watermark dimensions"
+    },
+    "unique_values": {
+      "val": [
+        0,
+        1
+      ],
+      "desc": "Binary alphabet"
+    },
+    "acm_iterations": {
+      "val": 10,
+      "desc": "Arnold iterations"
+    },
+    "catalan_iterations": {
+      "val": 5,
+      "desc": "Catalan iterations"
+    },
+    "catalan_key": {
+      "val": 7,
+      "desc": "Catalan seed key"
+    },
+    "mosaic_shape": {
+      "val": [
+        256,
+        256
+      ],
+      "desc": "Mosaic dimensions"
+    },
+    "mosaic_tile_count": {
+      "val": 64,
+      "desc": "Number of redundant watermark copies"
+    },
+    "bit_errors": {
+      "val": 0,
+      "desc": "Reversibility bit errors"
+    },
+    "nc": {
+      "val": 1.0,
+      "desc": "Normalized Correlation (Roundtrip)"
+    },
+    "ber": {
+      "val": 0.0,
+      "desc": "Bit Error Rate (Roundtrip)"
+    },
+    "exact_reversibility": {
+      "val": true,
+      "desc": "Exact bit-match flag"
+    }
+  },
+  "artifacts": [
+    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\phase2_watermark\\phase2_watermark_pipeline.png",
+    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\phase2_watermark\\phase2_report.json"
+  ]
+}

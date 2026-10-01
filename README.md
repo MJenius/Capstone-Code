@@ -119,6 +119,26 @@ These metrics measure watermarked-image quality against the original host (no at
    python create_training_data.py
    ```
 
+6. **Unified Master Research Pipeline CLI (`run.py`)**
+   ```bash
+   # Master visual demonstration for PPT presentation
+   python run.py --phase demo
+
+   # Execute individual research phases
+   python run.py --phase preprocessing
+   python run.py --phase watermark
+   python run.py --phase embedding
+   python run.py --phase attacks --attack crop
+   python run.py --phase extraction
+   python run.py --phase benchmark --quick
+   python run.py --phase tests --verbose
+   python run.py --phase ann-data
+   python run.py --phase reproduce --quick
+   python run.py --phase all
+   ```
+
+   See [docs/implementation_diagram.md](docs/implementation_diagram.md) for full Mermaid system diagrams, [docs/results_guide.md](docs/results_guide.md) for panel slide graphics, and [docs/project_status.md](docs/project_status.md) for component status.
+
 ## 📂 Project Structure
 
 ```

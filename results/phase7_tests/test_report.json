@@ -1,0 +1,155 @@
+{
+  "title": "Phase 7 \u2014 Automated Test Report",
+  "phase": "Phase 7",
+  "timestamp": "2026-10-01T12:38:48.466358",
+  "exit_code": 0,
+  "summary": "Executed 20 automated tests with 20 passed, 0 failed, 0 skipped.",
+  "metrics": {
+    "total_tests": {
+      "val": 20,
+      "desc": "Total executed test cases"
+    },
+    "passed": {
+      "val": 20,
+      "desc": "Passed test cases"
+    },
+    "failed": {
+      "val": 0,
+      "desc": "Failed test cases"
+    },
+    "skipped": {
+      "val": 0,
+      "desc": "Skipped test cases"
+    },
+    "pass_rate_pct": {
+      "val": 100.0,
+      "desc": "Test pass rate (NOT code coverage)"
+    }
+  },
+  "test_details": [
+    {
+      "nodeid": "tests/test_components.py::test_catalan_reversibility",
+      "outcome": "passed",
+      "duration": 0.06937729999935982,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_components.py::test_scrambler_reversibility",
+      "outcome": "passed",
+      "duration": 0.009036299999934272,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_components.py::test_mosaic_generation",
+      "outcome": "passed",
+      "duration": 0.0009056999997483217,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_components.py::test_adaptive_embedder_fidelity",
+      "outcome": "passed",
+      "duration": 0.01370889999998326,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_components.py::test_baseline_embedder_fidelity",
+      "outcome": "passed",
+      "duration": 0.001463099999455153,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_components.py::test_cropping_attack_and_mask_reproducibility",
+      "outcome": "passed",
+      "duration": 0.0017477999999755411,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_components.py::test_signal_attack_reproducibility",
+      "outcome": "passed",
+      "duration": 0.005076000000372005,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_components.py::test_collusion_attack_reproducibility",
+      "outcome": "passed",
+      "duration": 0.005245199999990291,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_components.py::test_nc_and_ber_metrics",
+      "outcome": "passed",
+      "duration": 0.0009851000004346133,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_phases.py::test_config_loading",
+      "outcome": "passed",
+      "duration": 0.0051720000001296285,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_phases.py::test_phase0_environment",
+      "outcome": "passed",
+      "duration": 0.10199660000034783,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_phases.py::test_phase1_preprocessing",
+      "outcome": "passed",
+      "duration": 1.9572451999993064,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_phases.py::test_phase2_watermark_reversibility",
+      "outcome": "passed",
+      "duration": 0.8802882999998474,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_phases.py::test_phase3_embedding_fidelity",
+      "outcome": "passed",
+      "duration": 1.4925328999997873,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_phases.py::test_phase4_attacks_reproducibility",
+      "outcome": "passed",
+      "duration": 1.2251332000005277,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_phases.py::test_phase5_extraction",
+      "outcome": "passed",
+      "duration": 1.052187799999956,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_phases.py::test_demo_execution",
+      "outcome": "passed",
+      "duration": 2.5726462000002357,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_pipeline.py::test_full_pipeline_roundtrip",
+      "outcome": "passed",
+      "duration": 0.09792169999946054,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_pipeline.py::test_mosaic_redundancy_under_cropping",
+      "outcome": "passed",
+      "duration": 0.003111199999693781,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_pipeline.py::test_benchmark_smoke_test",
+      "outcome": "passed",
+      "duration": 0.6706173000002309,
+      "error": null
+    }
+  ],
+  "artifacts": [
+    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\phase7_tests\\test_report.json",
+    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\phase7_tests\\test_report.md"
+  ]
+}

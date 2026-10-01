@@ -1,0 +1,21 @@
+{
+  "title": "Phase 4 \u2014 Attack Module Report (crop)",
+  "phase": "Phase 4",
+  "timestamp": "2026-10-01T12:38:43.641142",
+  "attack_type": "crop",
+  "parameters": {
+    "attack_type": "crop",
+    "mode": "random",
+    "intensity": 0.25,
+    "fill_val": "zero",
+    "seed": 42,
+    "retained_pixels": 49152,
+    "total_pixels": 65536,
+    "retained_pct": 75.0,
+    "removed_pct": 25.0
+  },
+  "artifacts": [
+    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\phase4_attacks\\crop\\attack_crop_visualization.png",
+    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\phase4_attacks\\crop\\report.json"
+  ]
+}

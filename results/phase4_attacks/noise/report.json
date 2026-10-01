@@ -1,0 +1,17 @@
+{
+  "title": "Phase 4 \u2014 Attack Module Report (noise)",
+  "phase": "Phase 4",
+  "timestamp": "2026-10-01T12:38:32.704807",
+  "attack_type": "noise",
+  "parameters": {
+    "attack_type": "noise",
+    "sigma": 0.05,
+    "seed": 42,
+    "mean_distortion": 0.03998885148828085,
+    "max_distortion": 0.2239542125512879
+  },
+  "artifacts": [
+    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\phase4_attacks\\noise\\attack_noise_visualization.png",
+    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\phase4_attacks\\noise\\report.json"
+  ]
+}

@@ -1,0 +1,76 @@
+# Default configuration for Capstone Robust Image Watermarking Research Pipeline
+# All paths, algorithmic parameters, and random seeds are centralized here.
+
+pipeline:
+  seed: 42
+  image_size: [256, 256]
+  watermark_size: [32, 32]
+  acm_iterations: 10
+  catalan_iterations: 5
+  catalan_key: 7
+  mosaic_grid: [8, 8]
+  alpha_base: 0.012
+  sensitivity: 2.0
+  baseline_alpha: 0.08
+
+paths:
+  raw_dir: "data/raw/div2k"
+  watermark_dir: "data/watermark"
+  watermark_binary_path: "data/watermark/watermark_binary.npy"
+  watermark_binary_png: "data/watermark/watermark_binary.png"
+  catalan_dir: "data/catalan"
+  scrambled_dir: "data/scrambled"
+  mosaic_dir: "data/mosaic"
+  preprocessed_dir: "preprocessed"
+  preprocessed_i: "preprocessed/I_channel"
+  preprocessed_rgb: "preprocessed/rgb_256"
+  preprocessed_metadata: "preprocessed/metadata"
+  splits_dir: "splits"
+  test_split_file: "splits/test.txt"
+  results_root: "results"
+
+attacks:
+  crop:
+    mode: "random"
+    intensity: 0.25
+    fill_val: "zero"
+    seed: 42
+  jpeg:
+    quality: 50
+  noise:
+    sigma: 0.05
+    seed: 42
+  blur:
+    kernel_size: 3
+    sigma: 0.0
+  collusion:
+    n_colluders: 5
+    noise_std: 0.01
+    seed: 42
+
+benchmark:
+  num_images: null # null means full split (165 images)
+  attacks:
+    - "no_attack"
+    - "crop_10"
+    - "crop_25"
+    - "crop_50"
+    - "jpeg_70"
+    - "jpeg_50"
+    - "noise_05"
+    - "blur_3"
+    - "collusion_2"
+    - "collusion_5"
+    - "collusion_10"
+    - "collusion_20"
+    - "collusion_50"
+    - "collusion_100"
+
+ann:
+  status: "PLANNED"
+  model_name: "blind_watermark_extractor_ann"
+  input_shape: [1, 256, 256]
+  output_shape: [1, 32, 32]
+  batch_size: 16
+  learning_rate: 0.001
+  epochs: 50

@@ -1,0 +1,16 @@
+{
+  "title": "Phase 4 \u2014 Attack Module Report (jpeg)",
+  "phase": "Phase 4",
+  "timestamp": "2026-10-01T12:38:32.090551",
+  "attack_type": "jpeg",
+  "parameters": {
+    "attack_type": "jpeg",
+    "quality": 50,
+    "mean_distortion": 0.02513907477259636,
+    "max_distortion": 0.2737445533275604
+  },
+  "artifacts": [
+    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\phase4_attacks\\jpeg\\attack_jpeg_visualization.png",
+    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\phase4_attacks\\jpeg\\report.json"
+  ]
+}

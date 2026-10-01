@@ -1,0 +1,46 @@
+{
+  "title": "Phase 3 \u2014 Perceptual Adaptive Embedding Report",
+  "phase": "Phase 3",
+  "timestamp": "2026-10-01T12:38:42.414935",
+  "summary": "Perceptual luminance-texture adaptive embedding performed into the I-channel.",
+  "mathematical_model": {
+    "formula": "alpha_pixel = alpha_base * (1.0 + sensitivity * mask); embedded = host + alpha_pixel * (wm - 0.5)",
+    "alpha_base": 0.012,
+    "sensitivity": 2.0,
+    "inversion_note": "Extraction uses non-blind residual scaling by alpha_base. Exact pixel-wise inverse scaling is an approximation in textured regions."
+  },
+  "metrics": {
+    "psnr_db": {
+      "val": 40.88966921670288,
+      "desc": "Peak Signal-to-Noise Ratio"
+    },
+    "ssim": {
+      "val": 0.9972133992891312,
+      "desc": "Structural Similarity Index"
+    },
+    "alpha_min": {
+      "val": 0.012000000104308128,
+      "desc": "Minimum local alpha strength"
+    },
+    "alpha_max": {
+      "val": 0.035999998450279236,
+      "desc": "Maximum local alpha strength"
+    },
+    "alpha_mean": {
+      "val": 0.017780616879463196,
+      "desc": "Mean local alpha strength"
+    },
+    "diff_mean": {
+      "val": 0.008890071883797646,
+      "desc": "Mean absolute pixel alteration"
+    },
+    "diff_max": {
+      "val": 0.018000006675720215,
+      "desc": "Maximum absolute pixel alteration"
+    }
+  },
+  "artifacts": [
+    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\phase3_embedding\\phase3_embedding_pipeline.png",
+    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\phase3_embedding\\report.json"
+  ]
+}

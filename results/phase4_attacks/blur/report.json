@@ -1,0 +1,17 @@
+{
+  "title": "Phase 4 \u2014 Attack Module Report (blur)",
+  "phase": "Phase 4",
+  "timestamp": "2026-10-01T12:38:33.311437",
+  "attack_type": "blur",
+  "parameters": {
+    "attack_type": "blur",
+    "kernel_size": 3,
+    "sigma": 0.0,
+    "mean_distortion": 0.023440174758434296,
+    "max_distortion": 0.4136500954627991
+  },
+  "artifacts": [
+    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\phase4_attacks\\blur\\attack_blur_visualization.png",
+    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\phase4_attacks\\blur\\report.json"
+  ]
+}

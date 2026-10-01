@@ -1,0 +1,46 @@
+{
+  "title": "Phase 0 \u2014 Environment & Dataset Audit",
+  "phase": "Phase 0",
+  "timestamp": "2026-10-01T12:41:07.215513",
+  "summary": "Environment verified successfully. Dataset, watermarks, and dependencies are loaded.",
+  "metrics": {
+    "raw_images_found": {
+      "val": 800,
+      "desc": "Number of raw DIV2K images"
+    },
+    "preprocessed_images_found": {
+      "val": 1100,
+      "desc": "Number of preprocessed I-channels"
+    },
+    "sample_image_dims": {
+      "val": [
+        1404,
+        2040,
+        3
+      ],
+      "desc": "Raw sample shape"
+    },
+    "watermark_dims": {
+      "val": [
+        32,
+        32
+      ],
+      "desc": "Binary watermark dimensions"
+    },
+    "watermark_unique_values": {
+      "val": [
+        0,
+        1
+      ],
+      "desc": "Watermark alphabet"
+    },
+    "config_seed": {
+      "val": 42,
+      "desc": "Master reproducibility seed"
+    }
+  },
+  "artifacts": [
+    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\phase0_environment\\report.json",
+    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\phase0_environment\\summary.txt"
+  ]
+}

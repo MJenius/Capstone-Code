@@ -1,0 +1,32 @@
+{
+  "title": "Phase 5 \u2014 Non-Blind Watermark Extraction Report",
+  "phase": "Phase 5",
+  "timestamp": "2026-10-01T12:38:44.692501",
+  "scenario": "25% Random Crop Attack",
+  "metrics": {
+    "nc": {
+      "val": 1.0,
+      "desc": "Normalized Correlation"
+    },
+    "ber": {
+      "val": 0.0,
+      "desc": "Bit Error Rate"
+    },
+    "bit_errors": {
+      "val": 0,
+      "desc": "Number of incorrect bits"
+    },
+    "total_bits": {
+      "val": 1024,
+      "desc": "Total watermark bits"
+    },
+    "exact_match": {
+      "val": true,
+      "desc": "Bit-exact match flag"
+    }
+  },
+  "artifacts": [
+    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\phase5_extraction\\phase5_extraction_pipeline.png",
+    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\phase5_extraction\\report.json"
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "title": "Phase 4 \u2014 Attack Module Report (collusion)",
+  "phase": "Phase 4",
+  "timestamp": "2026-10-01T12:38:34.080453",
+  "attack_type": "collusion",
+  "parameters": {
+    "attack_type": "collusion",
+    "n_colluders": 5,
+    "noise_std": 0.01,
+    "seed": 42,
+    "mean_distortion": 0.01042797561324145,
+    "max_distortion": 0.06290081975558837
+  },
+  "artifacts": [
+    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\phase4_attacks\\collusion\\attack_collusion_visualization.png",
+    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\phase4_attacks\\collusion\\report.json"
+  ]
+}

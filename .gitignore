@@ -5,6 +5,7 @@ benchmarking_results*.json
 collusion_curve.json
 study_comparison_metrics.json
 scratch/
+results/**/*.npy
 
 # Image data (Datasets and generated artifacts)
 DIV2K.tar
