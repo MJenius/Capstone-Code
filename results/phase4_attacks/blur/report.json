@@ -11,7 +11,7 @@
     "max_distortion": 0.4136500954627991
   },
   "artifacts": [
-    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\phase4_attacks\\blur\\attack_blur_visualization.png",
-    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\phase4_attacks\\blur\\report.json"
+    ".\\results\\phase4_attacks\\blur\\attack_blur_visualization.png",
+    ".\\results\\phase4_attacks\\blur\\report.json"
   ]
 }

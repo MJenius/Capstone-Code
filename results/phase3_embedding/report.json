@@ -1,7 +1,7 @@
 {
   "title": "Phase 3 \u2014 Perceptual Adaptive Embedding Report",
   "phase": "Phase 3",
-  "timestamp": "2026-10-31T15:09:12.072264",
+  "timestamp": "2026-10-31T17:26:44.845439",
   "summary": "Perceptual luminance-texture adaptive embedding performed into the I-channel.",
   "mathematical_model": {
     "formula": "alpha_pixel = alpha_base * (1.0 + sensitivity * mask); embedded = host + alpha_pixel * (wm - 0.5)",
@@ -40,7 +40,7 @@
     }
   },
   "artifacts": [
-    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\phase3_embedding\\phase3_embedding_pipeline.png",
-    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\phase3_embedding\\report.json"
+    "results/phase3_embedding/phase3_embedding_pipeline.png",
+    "results/phase3_embedding/report.json"
   ]
 }

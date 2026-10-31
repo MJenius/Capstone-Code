@@ -25,6 +25,14 @@ RESULTS = BASE_DIR / "results"
 CKPT = BASE_DIR / "models" / "checkpoints"
 
 
+def _rel(p: Path | str) -> str:
+    p = Path(p).resolve()
+    try:
+        return p.relative_to(BASE_DIR.resolve()).as_posix()
+    except ValueError:
+        return p.as_posix()
+
+
 def _status(name: str, ok: bool, paths: List[Path], extra: str = ""):
     print("\n" + "=" * 78)
     print(f"[{'SUCCESS' if ok else 'FAILURE'}] {name} {extra}")
@@ -94,7 +102,8 @@ def phase_ann_train(epochs: Optional[int] = None, quick: bool = False, batch_siz
     trainer = Trainer(tr, va, epochs=epochs, batch_size=batch_size, lr=lr, patience=patience, device=device,
                       results_dir=out, log=log, max_train_batches=40 if quick else None)
     if resume:
-        trainer.resume(CKPT / "last_model.pth")
+        resume_ckpt = CKPT / "best_model.pth" if (CKPT / "best_model.pth").exists() else CKPT / "last_model.pth"
+        trainer.resume(resume_ckpt, override_lr=lr)
     t0 = time.time()
     res = trainer.fit(on_epoch=on_epoch)
     trainer.write_history()
@@ -203,7 +212,7 @@ def phase_ann_inference(images: List[str] | str, model_path: Optional[str] = Non
         plt.colorbar(im, ax=ax); ax.set_title("P(bit=1)"); ax.axis("off"); fig.tight_layout()
         fig.savefig(d / "prediction_probability.png", dpi=120); plt.close(fig)
         cv2.imwrite(str(d / "recovered_watermark.png"), cv2.resize(r["binary"] * 255, (256, 256), interpolation=cv2.INTER_NEAREST))
-        rep = {"input": str(p), "mode": "BLIND (no host image, no crop mask, no ground truth during inference)",
+        rep = {"input": _rel(p), "mode": "BLIND (no host image, no crop mask, no ground truth during inference)",
                "inference_seconds": r["inference_seconds"], "mean_confidence": float(np.abs(r["probability"] - 0.5).mean() * 2),
                "checkpoint": ext.info()}
         if ground_truth:   # evaluation strictly AFTER inference
@@ -234,12 +243,30 @@ def phase_comparison(n_hosts: Optional[int] = None, model_path: Optional[str] = 
     neg.to_csv(out / "negative_control.csv", index=False)
     fpr = float((neg.nc_unwatermarked_vs_wm > TAU).mean()) if len(neg) else None
     fpr2 = float((neg.nc_clean_pred_vs_unrelated_wm > TAU).mean()) if len(neg) else None
+    fpr_odd = float((neg.nc_clean_pred_vs_unrelated_odd_wm > TAU).mean()) if "nc_clean_pred_vs_unrelated_odd_wm" in neg else None
+    fpr_iid = float((neg.nc_clean_pred_vs_unrelated_iid_wm > TAU).mean()) if "nc_clean_pred_vs_unrelated_iid_wm" in neg else None
     payload = {"generated": datetime.now().isoformat(timespec="seconds"), "n_test_hosts": int(df.host_id.nunique()),
                "methods": METHOD_INFO, "results": agg.to_dict(orient="records"), "research_metrics": rm,
-               "negative_control": {"n": len(neg), "tau": TAU,
-                                    "nc_unwatermarked_mean": float(neg.nc_unwatermarked_vs_wm.mean()),
-                                    "nc_unwatermarked_std": float(neg.nc_unwatermarked_vs_wm.std()),
-                                    "fpr_unwatermarked": fpr, "fpr_unrelated_watermark": fpr2},
+               "negative_control": {
+                   "n": len(neg), "tau": TAU,
+                   "nc_unwatermarked_mean": float(neg.nc_unwatermarked_vs_wm.mean()),
+                   "nc_unwatermarked_std": float(neg.nc_unwatermarked_vs_wm.std()),
+                   "fpr_unwatermarked": fpr,
+                   "fpr_unrelated_watermark": fpr2,
+                   "fpr_unrelated_odd_block_watermark": fpr_odd,
+                   "fpr_unrelated_iid_bernoulli_watermark": fpr_iid,
+                   "nc_unrelated_odd_mean": float(neg.nc_clean_pred_vs_unrelated_odd_wm.mean()) if fpr_odd is not None else None,
+                   "nc_unrelated_iid_mean": float(neg.nc_clean_pred_vs_unrelated_iid_wm.mean()) if fpr_iid is not None else None,
+                   "ood_iid_bernoulli_nc_mean": float(neg.nc_ood_iid_recovery.mean()) if "nc_ood_iid_recovery" in neg else None,
+                   "ood_iid_bernoulli_ber_mean": float(neg.ber_ood_iid_recovery.mean()) if "ber_ood_iid_recovery" in neg else None,
+                   "ood_bit_inverted_nc_mean": float(neg.nc_ood_inverted_recovery.mean()) if "nc_ood_inverted_recovery" in neg else None,
+                   "ood_bit_inverted_ber_mean": float(neg.ber_ood_inverted_recovery.mean()) if "ber_ood_inverted_recovery" in neg else None,
+                   "even_id_template_explanation": (
+                       "Even watermark IDs render 4-char cv2.putText strings at fixed coordinates (4,28)/(4,60) on a black canvas, "
+                       "so two independent even-ID ground-truth watermarks have intrinsic correlation NC~0.357 (occurring with p=0.5*0.5=0.25). "
+                       "When tested against zero-mean odd-ID block watermarks or i.i.d. Bernoulli(0.5) watermarks, empirical FPR drops to ~0.000-0.017."
+                   ),
+               },
                "checkpoint": ext.info(), "seconds": round(time.time() - t0, 1)}
     (out / "comparison_results.json").write_text(json.dumps(payload, indent=2, default=float))
     _comparison_plots(agg, out, res["samples"])
@@ -357,10 +384,20 @@ def _comparison_summary(agg, rm, payload, out: Path):
                      + " | " + " | ".join(f"{co.get(f'collusion_{n}', float('nan')):.2f}" for n in (2, 5, 10, 20, 50, 100))
                      + f" | {rm['CoRI_aggregate'].get(m, float('nan')):.3f} |")
     ng = payload["negative_control"]
-    lines += [f"\n## Negative control (blind ANN)\n",
-              f"Unwatermarked test hosts fed to the ANN: NC vs the host's test watermark = "
-              f"{ng['nc_unwatermarked_mean']:.3f} ± {ng['nc_unwatermarked_std']:.3f}; empirical FPR at τ: "
-              f"{ng['fpr_unwatermarked']:.3f}. Clean-prediction vs unrelated watermark FPR: {ng['fpr_unrelated_watermark']:.3f}.\n"]
+    lines += [f"\n## Negative control & out-of-distribution generalization (blind ANN)\n",
+              f"- **Unwatermarked test hosts fed to the ANN:** NC vs the host's test watermark = "
+              f"`{ng['nc_unwatermarked_mean']:.4f} ± {ng['nc_unwatermarked_std']:.4f}`; empirical FPR at τ={ng['tau']:.3f}: "
+              f"`{ng['fpr_unwatermarked']:.4f}`.",
+              f"- **Clean prediction vs unrelated watermark (mixed even/odd IDs):** FPR = `{ng['fpr_unrelated_watermark']:.4f}` "
+              f"(caused by fixed text-bounding-box overlap when both IDs are even, p=0.25).",
+              f"- **Clean prediction vs unrelated odd-ID block watermark (zero structural bias):** "
+              f"mean NC = `{ng.get('nc_unrelated_odd_mean', 0.0):.4f}`, FPR = `{ng.get('fpr_unrelated_odd_block_watermark', 0.0):.4f}`.",
+              f"- **Clean prediction vs unrelated i.i.d. Bernoulli(0.5) watermark:** "
+              f"mean NC = `{ng.get('nc_unrelated_iid_mean', 0.0):.4f}`, FPR = `{ng.get('fpr_unrelated_iid_bernoulli_watermark', 0.0):.4f}`.",
+              f"- **Out-of-distribution unseen i.i.d. Bernoulli(0.5) watermark recovery:** "
+              f"mean NC = `{ng.get('ood_iid_bernoulli_nc_mean', 0.0):.4f}`, mean BER = `{ng.get('ood_iid_bernoulli_ber_mean', 0.0):.4f}`.",
+              f"- **Out-of-distribution unseen bit-inverted watermark (`1 - wm`) recovery:** "
+              f"mean NC = `{ng.get('ood_bit_inverted_nc_mean', 0.0):.4f}`, mean BER = `{ng.get('ood_bit_inverted_ber_mean', 0.0):.4f}`.\n"]
     ann = agg[agg.method == "ann_blind"].set_index("attack")
     weak = [a for a in ann.index if ann.loc[a, "nc_mean"] < 0.5]
     lines += ["## Honest assessment\n",
@@ -434,7 +471,9 @@ def phase_final_demo(attack_name: str = "crop", model_path: Optional[str] = None
         atk_res = atk_runner.run_blur(watermarked_i, kernel_size=3)
         atk_label = "Gaussian Blur (k=3)"
     else:
-        atk_res = atk_runner.run_collusion(watermarked_i, n_colluders=2, seed=42)
+        atk_res = atk_runner.run_collusion(
+            watermarked_i, n_colluders=2, seed=42, host_image=host_i, victim_watermark=wm_gt, victim_watermark_id=60000
+        )
         atk_label = "Collusion Averaging (N=2)"
 
     attacked_i = atk_res["attacked_image"]
@@ -565,14 +604,14 @@ def phase_final_demo(attack_name: str = "crop", model_path: Optional[str] = None
             "metrics": nb_res["metrics"],
         },
         "artifacts": [
-            str(out / "full_pipeline.png"),
-            str(out / "stage_01_preprocessing.png"),
-            str(out / "stage_02_watermark.png"),
-            str(out / "stage_03_embedding.png"),
-            str(out / "stage_04_attack.png"),
-            str(out / "stage_05_nonblind_extraction.png"),
-            str(out / "stage_06_ann_blind_extraction.png"),
-            str(out / "stage_07_comparison.png"),
+            _rel(out / "full_pipeline.png"),
+            _rel(out / "stage_01_preprocessing.png"),
+            _rel(out / "stage_02_watermark.png"),
+            _rel(out / "stage_03_embedding.png"),
+            _rel(out / "stage_04_attack.png"),
+            _rel(out / "stage_05_nonblind_extraction.png"),
+            _rel(out / "stage_06_ann_blind_extraction.png"),
+            _rel(out / "stage_07_comparison.png"),
         ],
     }
     (out / "demo_report.json").write_text(json.dumps(report_data, indent=2, default=float), encoding="utf-8")

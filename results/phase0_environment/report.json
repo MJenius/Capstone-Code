@@ -1,7 +1,7 @@
 {
   "title": "Phase 0 \u2014 Environment & Dataset Audit",
   "phase": "Phase 0",
-  "timestamp": "2026-10-31T15:09:08.522188",
+  "timestamp": "2026-10-31T17:26:39.610496",
   "summary": "Environment verified successfully. Dataset, watermarks, and dependencies are loaded.",
   "metrics": {
     "raw_images_found": {
@@ -40,7 +40,7 @@
     }
   },
   "artifacts": [
-    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\phase0_environment\\report.json",
-    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\phase0_environment\\summary.txt"
+    "results/phase0_environment/report.json",
+    "results/phase0_environment/summary.txt"
   ]
 }

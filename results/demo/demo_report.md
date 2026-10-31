@@ -1,5 +1,5 @@
 # Capstone Research Pipeline Demonstration Report
-**Execution Timestamp:** 2026-10-31T15:09:16.368349
+**Execution Timestamp:** 2026-10-31T17:26:51.254363
 **Representative Host Sample:** `0001`
 
 ## Demonstration Overview
@@ -19,4 +19,4 @@ simulated attack (`25% Random Crop (Kept 75.0%)`), to non-blind host-subtracted 
 | **Status** | Recovery Outcome | `EXACT BIT-MATCH (100%)` | Validation status |
 
 ## Capstone Multi-Panel Artifact
-- Multi-Panel Demonstration Poster: [full_pipeline_demo.png](file:///C:\Users\mjeni\OneDrive\Desktop\Capstone\Code\results\demo\full_pipeline_demo.png)
+- Multi-Panel Demonstration Poster: `results/demo/full_pipeline_demo.png`

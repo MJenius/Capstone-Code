@@ -257,25 +257,13 @@ class PreANNBenchmarker:
             #     strength, plus interference from (N-1) independent watermarks.
             #
             for n in collusion_n_values:
-                hybrid_variants, base_variants = [], []
-                rng_coll = np.random.RandomState(img_idx * 1000 + n)
+                from core.hybrid_system import HybridSystem
+                hs = HybridSystem(alpha_base=self.alpha_base, sensitivity=self.sensitivity, baseline_alpha=self.base_alpha)
+                ch = hs.collusion_copies(host, self.wm_binary, n, seed=img_idx * 1000 + n, baseline=False)
+                cb = hs.collusion_copies(host, self.wm_binary, n, seed=img_idx * 1000 + n, baseline=True)
 
-                for k in range(n):
-                    if k == 0:
-                        # Victim: embed with the exact original watermark
-                        hybrid_variants.append(self.hybrid_embedder.embed(host, self.wm_mosaic))
-                        base_variants.append(self.baseline_embedder.embed(host, self.wm_binary, visible=False))
-                    else:
-                        # Other colluders: completely independent random watermarks
-                        indep_wm_cat = rng_coll.rand(*self.wm_catalan.shape).astype(np.float32)
-                        indep_mosaic = np.tile(indep_wm_cat, (8, 8))
-                        hybrid_variants.append(self.hybrid_embedder.embed(host, indep_mosaic))
-
-                        indep_wm_bin = rng_coll.rand(*self.wm_binary.shape).astype(np.float32)
-                        base_variants.append(self.baseline_embedder.embed(host, indep_wm_bin, visible=False))
-
-                atk_h = self.colluder.simulate_collusion(hybrid_variants, noise_std=0.01, seed=img_idx * 1000 + n + 7)
-                atk_b = self.colluder.simulate_collusion(base_variants, noise_std=0.01, seed=img_idx * 1000 + n + 7)
+                atk_h = self.colluder.simulate_collusion(ch['copies'], noise_std=0.01, seed=img_idx * 1000 + n + 7)
+                atk_b = self.colluder.simulate_collusion(cb['copies'], noise_std=0.01, seed=img_idx * 1000 + n + 7)
 
                 rec_h = self.extract_hybrid_non_blind(atk_h, host)
                 rec_b = self.extract_baseline_non_blind(atk_b, host)

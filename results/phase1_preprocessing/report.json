@@ -1,7 +1,7 @@
 {
   "title": "Phase 1 \u2014 Image Preprocessing Report",
   "phase": "Phase 1",
-  "timestamp": "2026-10-31T15:09:10.347886",
+  "timestamp": "2026-10-31T17:26:42.068205",
   "summary": "Image 0001 successfully resized to 256x256, transformed to NTSC YIQ color space, and I-channel normalized to [0, 1].",
   "metrics": {
     "original_shape": {
@@ -38,7 +38,7 @@
     }
   },
   "artifacts": [
-    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\phase1_preprocessing\\phase1_preprocessing_grid.png",
-    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\phase1_preprocessing\\report.json"
+    "results/phase1_preprocessing/phase1_preprocessing_grid.png",
+    "results/phase1_preprocessing/report.json"
   ]
 }

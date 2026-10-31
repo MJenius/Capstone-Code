@@ -12,7 +12,7 @@
     "max_distortion": 0.06290081975558837
   },
   "artifacts": [
-    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\phase4_attacks\\collusion\\attack_collusion_visualization.png",
-    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\phase4_attacks\\collusion\\report.json"
+    ".\\results\\phase4_attacks\\collusion\\attack_collusion_visualization.png",
+    ".\\results\\phase4_attacks\\collusion\\report.json"
   ]
 }

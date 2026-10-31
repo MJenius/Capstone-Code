@@ -198,7 +198,8 @@ Examples:
         runner.run_phase8(max_samples=args.num_images, quick=args.quick)
 
     elif phase == "ann-train":
-        runner.run_phase9(mode="train", epochs=args.epochs, quick=args.quick)
+        runner.run_phase9(mode="train", epochs=args.epochs, quick=args.quick,
+                          batch_size=args.batch_size, lr=args.lr, resume=args.resume)
 
     elif phase in ["ann-eval", "9"]:
         runner.run_phase9(mode="eval", model_path=args.model)

@@ -19,7 +19,16 @@ from core.preprocessing import bgr_to_yiq, normalize_channel, resize_image
 from training.metrics import bit_metrics
 from training.trainer import get_device, load_checkpoint
 
-DEFAULT_CKPT = Path(__file__).resolve().parent.parent / "models" / "checkpoints" / "best_model.pth"
+BASE_DIR = Path(__file__).resolve().parent.parent
+DEFAULT_CKPT = BASE_DIR / "models" / "checkpoints" / "best_model.pth"
+
+
+def _rel_path(p: Union[str, Path]) -> str:
+    p = Path(p).resolve()
+    try:
+        return p.relative_to(BASE_DIR.resolve()).as_posix()
+    except ValueError:
+        return p.as_posix()
 
 
 def image_to_i_channel(image: Union[str, Path, np.ndarray]) -> np.ndarray:
@@ -67,7 +76,7 @@ class BlindExtractor:
         return out
 
     def info(self) -> Dict:
-        return {"checkpoint": str(self.checkpoint), "epoch": self.ckpt.get("epoch"),
+        return {"checkpoint": _rel_path(self.checkpoint), "epoch": self.ckpt.get("epoch"),
                 "best_val_nc": self.ckpt.get("best_metric"), "model_config": self.ckpt.get("model_config"),
                 "saved_at": self.ckpt.get("saved_at")}
 

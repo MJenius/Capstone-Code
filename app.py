@@ -489,11 +489,13 @@ with tabs[7]:
         "image channel. It does **NOT** receive the clean host image, embedding residual, or crop mask. "
         "Ground-truth watermark comparison is performed strictly *after* inference."
     )
-    ckpt_files = sorted(list(CKPT_DIR.glob("*.pth")))
+    ckpt_files = sorted([p for p in CKPT_DIR.glob("*.pth") if "backup" not in p.name])
     if not ckpt_files:
         st.error("No trained checkpoint found in `models/checkpoints/`. Run training in Tab 7 or via `python run.py --phase ann-train`.")
     else:
-        ckpt_sel = st.selectbox("Select Model Checkpoint", [str(p) for p in ckpt_files], index=0)
+        ckpt_labels = [p.relative_to(BASE_DIR).as_posix() for p in ckpt_files]
+        ckpt_sel_rel = st.selectbox("Select Model Checkpoint", ckpt_labels, index=0)
+        ckpt_sel = str(BASE_DIR / ckpt_sel_rel)
         input_source = st.radio(
             "Blind Inference Input Source",
             ["Use current attacked image from Tab 5 (Attack Simulator)", "Upload an external watermarked/attacked image"],

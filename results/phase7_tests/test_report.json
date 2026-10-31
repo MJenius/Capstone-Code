@@ -185,7 +185,7 @@
     }
   ],
   "artifacts": [
-    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\phase7_tests\\test_report.json",
-    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\phase7_tests\\test_report.md"
+    ".\\results\\phase7_tests\\test_report.json",
+    ".\\results\\phase7_tests\\test_report.md"
   ]
 }

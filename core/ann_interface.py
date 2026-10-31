@@ -10,6 +10,18 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 import numpy as np
 
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+def _rel_path(p: Optional[Path | str]) -> Optional[str]:
+    if p is None:
+        return None
+    p = Path(p).resolve()
+    try:
+        return p.relative_to(BASE_DIR.resolve()).as_posix()
+    except ValueError:
+        return p.as_posix()
+
 
 class BaseANNWatermarkExtractor(ABC):
     """
@@ -69,7 +81,7 @@ class ConcreteBlindANNExtractor(BaseANNWatermarkExtractor):
         if ckpt_to_use.exists():
             self.model, self.ckpt_meta = load_checkpoint(ckpt_to_use, self.device)
             self.is_trained = True
-            self.checkpoint_path = str(ckpt_to_use)
+            self.checkpoint_path = _rel_path(ckpt_to_use)
         else:
             self.model = build_model().to(self.device)
             self.model.eval()
@@ -109,7 +121,7 @@ class ConcreteBlindANNExtractor(BaseANNWatermarkExtractor):
     def load_checkpoint(self, path: str) -> None:
         self.model, self.ckpt_meta = self._load_fn(Path(path), self.device)
         self.is_trained = True
-        self.checkpoint_path = str(path)
+        self.checkpoint_path = _rel_path(path)
 
 
 # Backwards-compatible alias for any external scripts importing PlannedANNModelPlaceholder
@@ -130,7 +142,7 @@ def get_ann_model_info() -> Dict[str, Any]:
         "output_shape": [1, 32, 32],
         "trainable_parameters": count_parameters(m),
         "loss_function": "BCEWithLogitsLoss + 0.1 * (1 - soft_NC)",
-        "checkpoint_path": str(best_ckpt) if best_ckpt.exists() else None,
+        "checkpoint_path": _rel_path(best_ckpt) if best_ckpt.exists() else None,
     }
     if best_ckpt.exists():
         import torch

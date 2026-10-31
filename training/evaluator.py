@@ -120,13 +120,35 @@ def run_comparison(extractor, system: Optional[HybridSystem] = None, n_hosts: Op
                 samples.append({"host_id": host.host_id, "attack": common["attack"], "attacked": ah["image"],
                                 "ann_prob": pr["probability"], "ann_bin": pr["binary"],
                                 "nonblind": nb_p["recovered"], "wm": wm})
-        # negative control: unwatermarked host + unrelated watermark
+        # negative control: unwatermarked host + unrelated watermark + OOD unseen watermarks
         pn = extractor.predict_batch([host_i])[0]
-        unrelated = make_watermark(sample_watermark_id("test", rng))
-        # (a) unwatermarked host vs the test watermark; (b) clean watermarked prediction vs an
-        # unrelated watermark.  Both should be ~N(0, 1/32) if the ANN is not hallucinating.
-        neg_rows.append({"host_id": host.host_id, "nc_unwatermarked_vs_wm": bit_metrics(pn["binary"], wm)["nc"],
-                         "nc_clean_pred_vs_unrelated_wm": bit_metrics(preds[0]["binary"], unrelated)["nc"]})
+        unrelated_id = sample_watermark_id("test", rng)
+        unrelated = make_watermark(unrelated_id)
+        # Ensure we also test an unrelated odd-ID watermark (zero template bias) and an i.i.d. Bernoulli(0.5) watermark
+        unrelated_odd_id = int(rng.randint(30_000, 35_000)) * 2 + 1
+        unrelated_odd = make_watermark(unrelated_odd_id)
+        unrelated_iid = (rng.rand(32, 32) > 0.5).astype(np.uint8)
+        # Out-of-distribution unseen watermark embedded into this test host
+        ood_iid_wm = (rng.rand(32, 32) > 0.5).astype(np.uint8)
+        ood_inv_wm = (1 - wm).astype(np.uint8)
+        hyb_ood_iid = system.embed(host_i, ood_iid_wm)
+        hyb_ood_inv = system.embed(host_i, ood_inv_wm)
+        p_ood = extractor.predict_batch([hyb_ood_iid, hyb_ood_inv])
+        neg_rows.append({
+            "host_id": host.host_id,
+            "wm_id": int(wm_id),
+            "unrelated_wm_id": int(unrelated_id),
+            "both_even_template": bool((wm_id % 2 == 0) and (unrelated_id % 2 == 0)),
+            "nc_unwatermarked_vs_wm": bit_metrics(pn["binary"], wm)["nc"],
+            "nc_clean_pred_vs_unrelated_wm": bit_metrics(preds[0]["binary"], unrelated)["nc"],
+            "nc_clean_pred_vs_unrelated_odd_wm": bit_metrics(preds[0]["binary"], unrelated_odd)["nc"],
+            "nc_clean_pred_vs_unrelated_iid_wm": bit_metrics(preds[0]["binary"], unrelated_iid)["nc"],
+            "nc_gt_wm_vs_unrelated_wm": bit_metrics(wm, unrelated)["nc"],
+            "nc_ood_iid_recovery": bit_metrics(p_ood[0]["binary"], ood_iid_wm)["nc"],
+            "ber_ood_iid_recovery": bit_metrics(p_ood[0]["binary"], ood_iid_wm)["ber"],
+            "nc_ood_inverted_recovery": bit_metrics(p_ood[1]["binary"], ood_inv_wm)["nc"],
+            "ber_ood_inverted_recovery": bit_metrics(p_ood[1]["binary"], ood_inv_wm)["ber"],
+        })
         if progress:
             progress(hi + 1, len(hosts))
     df = pd.DataFrame(rows)

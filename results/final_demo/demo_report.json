@@ -1,6 +1,6 @@
 {
   "title": "Complete Hybrid Watermarking Visual Pipeline Report",
-  "timestamp": "2026-10-31T15:09:22",
+  "timestamp": "2026-10-31T17:27:01",
   "host_id": "0014",
   "host_split": "test (held-out)",
   "attack": "crop",
@@ -15,9 +15,9 @@
   "blind_ann_extraction": {
     "extractor_type": "BLIND (Attacked I-channel only; NO original host image or crop mask used)",
     "checkpoint": {
-      "checkpoint": "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\models\\checkpoints\\best_model.pth",
-      "epoch": 4,
-      "best_val_nc": 0.7332680384318034,
+      "checkpoint": "models/checkpoints/best_model.pth",
+      "epoch": 10,
+      "best_val_nc": 0.7758937623765734,
       "model_config": {
         "base_channels": 16,
         "decoder_channels": 64,
@@ -28,9 +28,9 @@
         "catalan_key": 7,
         "use_key_permutation": true
       },
-      "saved_at": "2026-10-31T14:56:35"
+      "saved_at": "2026-10-31T17:12:10"
     },
-    "inference_seconds": 0.039001099998131394,
+    "inference_seconds": 0.03974729999026749,
     "metrics": {
       "nc": 1.0,
       "ber": 0.0,
@@ -52,13 +52,13 @@
     }
   },
   "artifacts": [
-    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\final_demo\\full_pipeline.png",
-    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\final_demo\\stage_01_preprocessing.png",
-    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\final_demo\\stage_02_watermark.png",
-    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\final_demo\\stage_03_embedding.png",
-    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\final_demo\\stage_04_attack.png",
-    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\final_demo\\stage_05_nonblind_extraction.png",
-    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\final_demo\\stage_06_ann_blind_extraction.png",
-    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\final_demo\\stage_07_comparison.png"
+    "results/final_demo/full_pipeline.png",
+    "results/final_demo/stage_01_preprocessing.png",
+    "results/final_demo/stage_02_watermark.png",
+    "results/final_demo/stage_03_embedding.png",
+    "results/final_demo/stage_04_attack.png",
+    "results/final_demo/stage_05_nonblind_extraction.png",
+    "results/final_demo/stage_06_ann_blind_extraction.png",
+    "results/final_demo/stage_07_comparison.png"
   ]
 }

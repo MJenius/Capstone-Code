@@ -1,7 +1,7 @@
 {
   "title": "Phase 5 \u2014 Non-Blind Watermark Extraction Report",
   "phase": "Phase 5",
-  "timestamp": "2026-10-31T15:09:14.271387",
+  "timestamp": "2026-10-31T17:26:48.103417",
   "scenario": "25% Random Crop Attack",
   "metrics": {
     "nc": {
@@ -26,7 +26,7 @@
     }
   },
   "artifacts": [
-    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\phase5_extraction\\phase5_extraction_pipeline.png",
-    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\phase5_extraction\\report.json"
+    "results/phase5_extraction/phase5_extraction_pipeline.png",
+    "results/phase5_extraction/report.json"
   ]
 }

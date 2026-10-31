@@ -1,7 +1,7 @@
 {
   "title": "Phase 9 \u2014 Blind ANN Watermark Extractor (Architecture & Status)",
   "phase": "Phase 9",
-  "timestamp": "2026-10-31T15:02:27.616690",
+  "timestamp": "2026-10-31T17:15:34.422865",
   "status": "TRAINED",
   "ann_info": {
     "status": "TRAINED",
@@ -19,109 +19,109 @@
     ],
     "trainable_parameters": 276466,
     "loss_function": "BCEWithLogitsLoss + 0.1 * (1 - soft_NC)",
-    "checkpoint_path": "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\models\\checkpoints\\best_model.pth",
-    "epoch": 4,
-    "best_val_nc": 0.7332680384318034,
-    "saved_at": "2026-10-31T14:56:35"
+    "checkpoint_path": "models/checkpoints/best_model.pth",
+    "epoch": 10,
+    "best_val_nc": 0.7758937623765734,
+    "saved_at": "2026-10-31T17:12:10"
   },
   "execution_result": {
     "split": "test (held-out hosts & watermark IDs)",
     "n_samples": 360,
     "n_hosts": 120,
     "overall": {
-      "nc": 0.5757960650787866,
-      "ber": 0.18408203125,
-      "accuracy": 0.81591796875,
-      "precision": 0.604131346637139,
-      "recall": 0.8564301109415456,
-      "f1": 0.6190362539583627
+      "nc": 0.6189049353086272,
+      "ber": 0.1525173611111111,
+      "accuracy": 0.8474826388888889,
+      "precision": 0.6275567874044673,
+      "recall": 0.8888419769997111,
+      "f1": 0.6523546003274994
     },
     "per_attack": [
       {
         "attack_type": "blur",
         "n": 37,
-        "nc_mean": 0.6532456593546064,
-        "nc_std": 0.3001671651932958,
-        "ber_mean": 0.11887668918918919,
-        "ber_std": 0.11738121662657217,
-        "accuracy_mean": 0.8811233108108109,
-        "f1_mean": 0.6548549841198854
+        "nc_mean": 0.6718978061907978,
+        "nc_std": 0.31715086512556345,
+        "ber_mean": 0.11114336993243243,
+        "ber_std": 0.1108530688193738,
+        "accuracy_mean": 0.8888566300675675,
+        "f1_mean": 0.6627631352614112
       },
       {
         "attack_type": "clean",
         "n": 39,
-        "nc_mean": 0.7450334459734914,
-        "nc_std": 0.33439847374243825,
-        "ber_mean": 0.10384114583333333,
-        "ber_std": 0.1404094866465369,
-        "accuracy_mean": 0.8961588541666666,
-        "f1_mean": 0.7249098269534058
+        "nc_mean": 0.7818908496283669,
+        "nc_std": 0.29428162072856223,
+        "ber_mean": 0.06455328525641026,
+        "ber_std": 0.08931530884307527,
+        "accuracy_mean": 0.9354467147435898,
+        "f1_mean": 0.759190202366047
       },
       {
         "attack_type": "combined",
         "n": 73,
-        "nc_mean": 0.5062748295542225,
-        "nc_std": 0.23260842797001072,
-        "ber_mean": 0.2288901969178082,
-        "ber_std": 0.11895622395595325,
-        "accuracy_mean": 0.7711098030821918,
-        "f1_mean": 0.5673706284375031
+        "nc_mean": 0.5572999248634167,
+        "nc_std": 0.24148716069592607,
+        "ber_mean": 0.1883962970890411,
+        "ber_std": 0.10009630035718084,
+        "accuracy_mean": 0.811603702910959,
+        "f1_mean": 0.6085946073209958
       },
       {
         "attack_type": "crop_center",
         "n": 29,
-        "nc_mean": 0.7454928597481945,
-        "nc_std": 0.327786572438579,
-        "ber_mean": 0.10631061422413793,
-        "ber_std": 0.14264612515312763,
-        "accuracy_mean": 0.8936893857758621,
-        "f1_mean": 0.7292657141263994
+        "nc_mean": 0.7663108838500092,
+        "nc_std": 0.31290411616339603,
+        "ber_mean": 0.07610452586206896,
+        "ber_std": 0.1052123267045951,
+        "accuracy_mean": 0.923895474137931,
+        "f1_mean": 0.7414323871704365
       },
       {
         "attack_type": "crop_random",
         "n": 52,
-        "nc_mean": 0.7518125297155086,
-        "nc_std": 0.3135521005452214,
-        "ber_mean": 0.10736553485576923,
-        "ber_std": 0.13833048227440295,
-        "accuracy_mean": 0.8926344651442307,
-        "f1_mean": 0.7449824477770679
+        "nc_mean": 0.7964208098959683,
+        "nc_std": 0.2787123330332882,
+        "ber_mean": 0.06458458533653846,
+        "ber_std": 0.0864944830528406,
+        "accuracy_mean": 0.9354154146634616,
+        "f1_mean": 0.7822898191292915
       },
       {
         "attack_type": "jpeg",
         "n": 59,
-        "nc_mean": 0.39627308065856487,
-        "nc_std": 0.19354138298068133,
-        "ber_mean": 0.2646484375,
-        "ber_std": 0.08839355626398991,
-        "accuracy_mean": 0.7353515625,
-        "f1_mean": 0.4999057039145035
+        "nc_mean": 0.40679457285633736,
+        "nc_std": 0.19487248196008927,
+        "ber_mean": 0.258838718220339,
+        "ber_std": 0.07544623377315303,
+        "accuracy_mean": 0.741161281779661,
+        "f1_mean": 0.5110959377060942
       },
       {
         "attack_type": "median",
         "n": 29,
-        "nc_mean": 0.2715386609248507,
-        "nc_std": 0.09954211149582143,
-        "ber_mean": 0.27892645474137934,
-        "ber_std": 0.06637260227891328,
-        "accuracy_mean": 0.7210735452586207,
-        "f1_mean": 0.4327849478320699
+        "nc_mean": 0.4340306102809704,
+        "nc_std": 0.15343590444849722,
+        "ber_mean": 0.23989762931034483,
+        "ber_std": 0.05456546533690021,
+        "accuracy_mean": 0.7601023706896551,
+        "f1_mean": 0.5498347095007518
       },
       {
         "attack_type": "noise",
         "n": 42,
-        "nc_mean": 0.5984249923390055,
-        "nc_std": 0.2846430250281308,
-        "ber_mean": 0.20817057291666666,
-        "ber_std": 0.154095177031378,
-        "accuracy_mean": 0.7918294270833334,
-        "f1_mean": 0.642878211268939
+        "nc_mean": 0.6320060711570933,
+        "nc_std": 0.27190986205911527,
+        "ber_mean": 0.16022600446428573,
+        "ber_std": 0.10928998408657642,
+        "accuracy_mean": 0.8397739955357143,
+        "f1_mean": 0.6668837896112345
       }
     ],
     "checkpoint": {
-      "checkpoint": "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\models\\checkpoints\\best_model.pth",
-      "epoch": 4,
-      "best_val_nc": 0.7332680384318034,
+      "checkpoint": "models/checkpoints/best_model.pth",
+      "epoch": 10,
+      "best_val_nc": 0.7758937623765734,
       "model_config": {
         "base_channels": 16,
         "decoder_channels": 64,
@@ -132,12 +132,12 @@
         "catalan_key": 7,
         "use_key_permutation": true
       },
-      "saved_at": "2026-10-31T14:56:35"
+      "saved_at": "2026-10-31T17:12:10"
     },
-    "seconds": 15.6
+    "seconds": 16.8
   },
   "interfaces_ready": true,
   "artifacts": [
-    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\phase9_ann\\ann_status.json"
+    "results/phase9_ann/ann_status.json"
   ]
 }

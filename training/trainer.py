@@ -71,7 +71,8 @@ def evaluate_loader(model, loader, loss_fn, device) -> Dict[str, float]:
     model.eval()
     tot, n, acc = 0.0, 0, {}
     for x, y, _ in loader:
-        x, y = x.to(device), y.to(device)
+        x = x.to(device, memory_format=torch.channels_last)
+        y = y.to(device)
         out = model(x)
         tot += loss_fn(out, y).item() * x.shape[0]
         n += x.shape[0]
@@ -88,27 +89,36 @@ class Trainer:
                  log: Callable[[str], None] = print, max_train_batches: Optional[int] = None):
         set_seed(seed)
         if num_threads or (os.cpu_count() and not torch.cuda.is_available()):
-            torch.set_num_threads(num_threads or os.cpu_count())
+            opt_threads = num_threads or min(8, os.cpu_count() or 8)
+            torch.set_num_threads(opt_threads)
         self.device = get_device(device)
         self.cfg = dict(epochs=epochs, batch_size=batch_size, lr=lr, weight_decay=weight_decay, patience=patience,
                         nc_weight=nc_weight, seed=seed, device=str(self.device), optimizer="AdamW",
-                        scheduler="ReduceLROnPlateau(mode=max on val NC, factor=0.5, patience=2)",
+                        scheduler="ReduceLROnPlateau(mode=max on val NC, factor=0.5, patience=1)",
                         loss=f"BCEWithLogits + {nc_weight} * (1 - softNC)", selection="max val NC",
-                        n_train=len(train_ds), n_val=len(val_ds), max_train_batches=max_train_batches)
+                        n_train=len(train_ds), n_val=len(val_ds), max_train_batches=max_train_batches,
+                        memory_format="channels_last", cpu_threads=torch.get_num_threads())
         g = torch.Generator(); g.manual_seed(seed)
         self.train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, generator=g, drop_last=True)
         self.val_loader = DataLoader(val_ds, batch_size=batch_size * 2, shuffle=False)
-        self.model: BlindWatermarkExtractor = build_model(model_cfg).to(self.device)
+        self.model: BlindWatermarkExtractor = build_model(model_cfg).to(self.device, memory_format=torch.channels_last)
         self.loss_fn = WatermarkLoss(nc_weight)
         self.opt = torch.optim.AdamW(self.model.parameters(), lr=lr, weight_decay=weight_decay)
-        self.sched = torch.optim.lr_scheduler.ReduceLROnPlateau(self.opt, mode="max", factor=0.5, patience=2)
+        self.sched = torch.optim.lr_scheduler.ReduceLROnPlateau(self.opt, mode="max", factor=0.5, patience=1)
         self.ckpt_dir = Path(ckpt_dir)
         self.results_dir = Path(results_dir) if results_dir else None
         self.log = log
         self.max_train_batches = max_train_batches
         self.history, self.start_epoch, self.best, self.bad_epochs = [], 0, -1.0, 0
+        best_file = self.ckpt_dir / "best_model.pth"
+        if best_file.exists():
+            try:
+                ck_b = torch.load(best_file, map_location="cpu", weights_only=False)
+                self.best = float(ck_b.get("best_metric", -1.0))
+            except Exception:
+                pass
 
-    def resume(self, path: Path) -> bool:
+    def resume(self, path: Path, override_lr: Optional[float] = None) -> bool:
         path = Path(path)
         if not path.exists():
             return False
@@ -116,12 +126,15 @@ class Trainer:
         self.model.load_state_dict(ck["model_state"])
         if ck.get("optimizer_state"):
             self.opt.load_state_dict(ck["optimizer_state"])
-        if ck.get("scheduler_state"):
+        if ck.get("scheduler_state") and override_lr is None:
             self.sched.load_state_dict(ck["scheduler_state"])
-        self.history = ck.get("history", [])
+        if override_lr is not None:
+            for pg in self.opt.param_groups:
+                pg["lr"] = override_lr
+        self.history = list(ck.get("history", []))
         self.start_epoch = int(ck.get("epoch", 0))
-        self.best = float(ck.get("best_metric", -1.0))
-        self.log(f"Resumed from {path} at epoch {self.start_epoch} (best val NC {self.best:.4f})")
+        self.best = max(self.best, float(ck.get("best_metric", -1.0)))
+        self.log(f"Resumed from {path} at epoch {self.start_epoch} (best val NC {self.best:.4f}, lr={self.opt.param_groups[0]['lr']:.2e})")
         return True
 
     def train_one_epoch(self) -> Dict[str, float]:
@@ -130,7 +143,8 @@ class Trainer:
         for b, (x, y, _) in enumerate(self.train_loader):
             if self.max_train_batches and b >= self.max_train_batches:
                 break
-            x, y = x.to(self.device), y.to(self.device)
+            x = x.to(self.device, memory_format=torch.channels_last)
+            y = y.to(self.device)
             out = self.model(x)
             loss = self.loss_fn(out, y)
             self.opt.zero_grad(set_to_none=True)

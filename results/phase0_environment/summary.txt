@@ -1,7 +1,7 @@
 PHASE 0 ENVIRONMENT & DATASET AUDIT
-Timestamp: 2026-10-31T15:09:08.522188
+Timestamp: 2026-10-31T17:26:39.610496
 DIV2K Raw Images: 800
 Preprocessed I-channels: 1100
-Sample Image Path: C:\Users\mjeni\OneDrive\Desktop\Capstone\Code\data\raw\div2k\0001.png
+Sample Image Path: data/raw/div2k/0001.png
 Watermark Shape: (32, 32) (Unique: [0 1])
 Status: READY

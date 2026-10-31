@@ -52,6 +52,13 @@ class PhaseRunner:
             catalan_key=self.config["pipeline"]["catalan_key"],
         )
 
+    def _rel(self, p: Path | str) -> str:
+        p = Path(p).resolve()
+        try:
+            return p.relative_to(self.base_dir.resolve()).as_posix()
+        except ValueError:
+            return p.as_posix()
+
     def _get_first_host_path(self) -> Path:
         """Find the first available raw image or preprocessed I-channel."""
         raw_dir = self.base_dir / self.config["paths"]["raw_dir"]
@@ -103,7 +110,7 @@ class PhaseRunner:
                 "watermark_unique_values": {"val": [int(x) for x in np.unique(wm)], "desc": "Watermark alphabet"},
                 "config_seed": {"val": self.config["pipeline"]["seed"], "desc": "Master reproducibility seed"}
             },
-            "artifacts": [str(out_dir / "report.json"), str(out_dir / "summary.txt")]
+            "artifacts": [self._rel(out_dir / "report.json"), self._rel(out_dir / "summary.txt")]
         }
 
         with open(out_dir / "report.json", "w", encoding="utf-8") as f:
@@ -114,7 +121,7 @@ class PhaseRunner:
             f"Timestamp: {report['timestamp']}\n"
             f"DIV2K Raw Images: {raw_count}\n"
             f"Preprocessed I-channels: {preproc_count}\n"
-            f"Sample Image Path: {host_path}\n"
+            f"Sample Image Path: {self._rel(host_path)}\n"
             f"Watermark Shape: {wm.shape} (Unique: {np.unique(wm)})\n"
             "Status: READY\n"
         )
@@ -165,7 +172,7 @@ class PhaseRunner:
                 "i_channel_norm_min": {"val": float(preproc_data["i_channel_norm"].min()), "desc": "Normalized minimum"},
                 "i_channel_norm_max": {"val": float(preproc_data["i_channel_norm"].max()), "desc": "Normalized maximum"},
             },
-            "artifacts": [str(grid_path), str(out_dir / "report.json")]
+            "artifacts": [self._rel(grid_path), self._rel(out_dir / "report.json")]
         }
 
         with open(out_dir / "report.json", "w", encoding="utf-8") as f:
@@ -222,7 +229,7 @@ class PhaseRunner:
                 "ber": {"val": results["reversibility_metrics"]["ber"], "desc": "Bit Error Rate (Roundtrip)"},
                 "exact_reversibility": {"val": results["exact_reversibility"], "desc": "Exact bit-match flag"},
             },
-            "artifacts": [str(grid_path), str(out_dir / "phase2_report.json")]
+            "artifacts": [self._rel(grid_path), self._rel(out_dir / "phase2_report.json")]
         }
 
         with open(out_dir / "phase2_report.json", "w", encoding="utf-8") as f:
@@ -295,7 +302,7 @@ class PhaseRunner:
                 "diff_mean": {"val": embed_res["diff_mean"], "desc": "Mean absolute pixel alteration"},
                 "diff_max": {"val": embed_res["diff_max"], "desc": "Maximum absolute pixel alteration"}
             },
-            "artifacts": [str(grid_path), str(out_dir / "report.json")]
+            "artifacts": [self._rel(grid_path), self._rel(out_dir / "report.json")]
         }
 
         with open(out_dir / "report.json", "w", encoding="utf-8") as f:
@@ -368,7 +375,13 @@ class PhaseRunner:
             noise_std = atk_cfg.get("noise_std", 0.01)
             seed = atk_cfg.get("seed", 42)
             attack_res = self.attack_runner.run_collusion(
-                watermarked_i, n_colluders=n_colluders, noise_std=noise_std, seed=seed
+                watermarked_i,
+                n_colluders=n_colluders,
+                noise_std=noise_std,
+                seed=seed,
+                host_image=host_i,
+                victim_watermark=wm,
+                victim_watermark_id=0,
             )
             panels = [
                 ("Victim Watermarked I-Channel", watermarked_i),
@@ -392,7 +405,7 @@ class PhaseRunner:
             "timestamp": datetime.now().isoformat(),
             "attack_type": attack_name,
             "parameters": {k: v for k, v in attack_res.items() if k not in ["attacked_image", "mask"]},
-            "artifacts": [str(grid_path), str(out_dir / "report.json")]
+            "artifacts": [self._rel(grid_path), self._rel(out_dir / "report.json")]
         }
         with open(out_dir / "report.json", "w", encoding="utf-8") as f:
             json.dump(report, f, indent=2)
@@ -461,7 +474,7 @@ class PhaseRunner:
                 "total_bits": {"val": ext_res["metrics"]["total_bits"], "desc": "Total watermark bits"},
                 "exact_match": {"val": ext_res["metrics"]["exact_match"], "desc": "Bit-exact match flag"},
             },
-            "artifacts": [str(grid_path), str(out_dir / "report.json")]
+            "artifacts": [self._rel(grid_path), self._rel(out_dir / "report.json")]
         }
         with open(out_dir / "report.json", "w", encoding="utf-8") as f:
             json.dump(report, f, indent=2)
@@ -605,7 +618,7 @@ class PhaseRunner:
             "title": "Phase 6 — Benchmark Evaluation",
             "phase": "Phase 6",
             "records": len(results),
-            "artifacts": [str(res_json), str(csv_path), str(out_dir / "summary.md"), str(plots_dir)]
+            "artifacts": [self._rel(res_json), self._rel(csv_path), self._rel(out_dir / "summary.md"), self._rel(plots_dir)]
         }
 
     # =========================================================================
@@ -654,7 +667,7 @@ class PhaseRunner:
                 "pass_rate_pct": {"val": pass_rate, "desc": "Test pass rate (NOT code coverage)"},
             },
             "test_details": collector.reports,
-            "artifacts": [str(out_dir / "test_report.json"), str(out_dir / "test_report.md")]
+            "artifacts": [self._rel(out_dir / "test_report.json"), self._rel(out_dir / "test_report.md")]
         }
 
         with open(out_dir / "test_report.json", "w", encoding="utf-8") as f:
@@ -719,9 +732,9 @@ class PhaseRunner:
                 "validation_status": {"val": summary["data_validation_status"], "desc": "Dataset integrity check"},
             },
             "artifacts": [
-                str(ANN_DIR / "dataset_summary.json"),
-                str(ANN_DIR / "metadata.csv"),
-                str(ANN_DIR / "visualizations" / "input_label_pairs.png"),
+                self._rel(ANN_DIR / "dataset_summary.json"),
+                self._rel(ANN_DIR / "metadata.csv"),
+                self._rel(ANN_DIR / "visualizations" / "input_label_pairs.png"),
             ],
         }
 
@@ -729,7 +742,8 @@ class PhaseRunner:
     # PHASE 9: Blind ANN Watermark Extractor (TRAINED & EVALUATED)
     # =========================================================================
     def run_phase9(self, mode: str = "status", epochs: Optional[int] = None, quick: bool = False,
-                   model_path: Optional[str] = None) -> Dict[str, Any]:
+                   model_path: Optional[str] = None, batch_size: int = 32, lr: float = 2e-3,
+                   resume: bool = False) -> Dict[str, Any]:
         """Run or inspect Phase 9: Blind ANN Watermark Extractor training/evaluation."""
         logging.info(f"Running Phase 9: Blind ANN Watermark Extractor [{mode}]...")
         out_dir = self.results_root / "phase9_ann"
@@ -740,7 +754,7 @@ class PhaseRunner:
 
         res_data = {}
         if mode == "train":
-            res_data = phase_ann_train(epochs=epochs, quick=quick)
+            res_data = phase_ann_train(epochs=epochs, quick=quick, batch_size=batch_size, lr=lr, resume=resume)
         elif mode == "eval":
             res_data = phase_ann_eval(model_path=model_path)
 
@@ -753,7 +767,7 @@ class PhaseRunner:
             "ann_info": info,
             "execution_result": res_data if isinstance(res_data, dict) else {},
             "interfaces_ready": True,
-            "artifacts": [str(out_dir / "ann_status.json")],
+            "artifacts": [self._rel(out_dir / "ann_status.json")],
         }
         with open(out_dir / "ann_status.json", "w", encoding="utf-8") as f:
             json.dump(report, f, indent=2, default=str)
@@ -814,7 +828,9 @@ class PhaseRunner:
             atk_res = self.attack_runner.run_blur(watermarked_i, kernel_size=3)
             attack_label = "Gaussian Blur (k=3)"
         else:
-            atk_res = self.attack_runner.run_collusion(watermarked_i, n_colluders=5, seed=42)
+            atk_res = self.attack_runner.run_collusion(
+                watermarked_i, n_colluders=5, seed=42, host_image=host_i, victim_watermark=wm_gt, victim_watermark_id=0
+            )
             attack_label = "Collusion Averaging (N=5)"
 
         attacked_i = atk_res["attacked_image"]
@@ -876,7 +892,7 @@ class PhaseRunner:
             f"| **Robustness** | Bit Errors | `{metrics['bit_errors']} / {wm_gt.size}` | Total bit discrepancy |",
             f"| **Status** | Recovery Outcome | `{'EXACT BIT-MATCH (100%)' if metrics['ber'] == 0 else 'ROBUST RECOVERY'}` | Validation status |\n",
             "## Capstone Multi-Panel Artifact",
-            f"- Multi-Panel Demonstration Poster: [full_pipeline_demo.png](file:///{poster_path})",
+            f"- Multi-Panel Demonstration Poster: `{self._rel(poster_path)}`",
         ]
         with open(demo_md_path, "w", encoding="utf-8") as f:
             f.write("\n".join(md_content))
@@ -890,7 +906,7 @@ class PhaseRunner:
             logging.warning(f"Final ANN demo skipped or partial: {exc}")
         return {
             "title": "Complete Pipeline Demonstration",
-            "poster_path": str(poster_path),
-            "report_path": str(demo_md_path),
+            "poster_path": self._rel(poster_path),
+            "report_path": self._rel(demo_md_path),
             "metrics": demo_metrics
         }

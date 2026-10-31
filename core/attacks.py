@@ -106,28 +106,41 @@ class AttackRunner:
         n_colluders: int = 5,
         noise_std: float = 0.01,
         seed: Optional[int] = 42,
+        host_image: Optional[np.ndarray] = None,
+        victim_watermark: Optional[np.ndarray] = None,
+        victim_watermark_id: int = 0,
     ) -> Dict[str, Any]:
         """
-        Apply collaborative averaging collusion attack.
-        Simulates N colluders sharing watermarked copies (1 victim + N-1 colluders).
-        """
-        rng = np.random.RandomState(seed if seed is not None else 42)
-        images = [victim_watermarked]
+        Apply collaborative averaging collusion attack using the authoritative
+        scientifically valid multi-watermark construction (`HybridSystem.collusion_copies`).
 
-        if independent_watermarked_list and len(independent_watermarked_list) >= (n_colluders - 1):
-            images.extend(independent_watermarked_list[: n_colluders - 1])
-        else:
-            # Generate scientifically valid independent colluder watermarked copies
-            # by embedding N-1 independent random binary watermarks via the hybrid pipeline
+        Simulates N colluders sharing watermarked copies of the SAME original host image
+        (copy 0 = victim watermarked image; copies 1..N-1 = N-1 independent binary watermarks
+        embedded into the SAME clean host image via the full Arnold -> Catalan -> 8x8 mosaic ->
+        adaptive embedding chain).
+
+        Raises ValueError if neither `independent_watermarked_list` (with >= N-1 copies)
+        nor `host_image` (clean unwatermarked host I-channel) is supplied. Never fabricates
+        colluder copies by embedding into an already-watermarked image.
+        """
+        colluder_wm_ids: List[int] = []
+        if independent_watermarked_list is not None and len(independent_watermarked_list) >= (n_colluders - 1):
+            images = [victim_watermarked] + list(independent_watermarked_list[: n_colluders - 1])
+        elif host_image is not None:
             from core.data_sources import make_watermark
             from core.hybrid_system import HybridSystem
             sys_ = HybridSystem()
-            for k in range(n_colluders - 1):
-                wm_indep = make_watermark(70000 + int(rng.randint(0, 100000)))
-                # Estimate underlying host by slight smoothing of victim_watermarked when clean host is not passed
-                host_approx = victim_watermarked
-                colluder_img = sys_.embed(host_approx, wm_indep)
-                images.append(colluder_img)
+            vwm = victim_watermark if victim_watermark is not None else make_watermark(victim_watermark_id)
+            cp = sys_.collusion_copies(host_image, vwm, n=n_colluders, seed=seed if seed is not None else 42)
+            images = [victim_watermarked] + cp["copies"][1:]
+            colluder_wm_ids = cp["colluder_wm_ids"]
+        else:
+            raise ValueError(
+                "Scientifically valid collusion requires either `independent_watermarked_list` "
+                "(>= n_colluders - 1 differently-watermarked copies of the same host) or "
+                "`host_image` (the clean unwatermarked host I-channel so N-1 independent watermarks "
+                "can be embedded into the same host via HybridSystem.collusion_copies)."
+            )
 
         attacked = self.colluder.simulate_collusion(images, noise_std=noise_std, seed=seed)
         diff = np.abs(attacked - victim_watermarked)
@@ -137,6 +150,8 @@ class AttackRunner:
             "mask": None,
             "attack_type": "collusion",
             "n_colluders": int(n_colluders),
+            "victim_watermark_id": int(victim_watermark_id),
+            "colluder_watermark_ids": colluder_wm_ids,
             "noise_std": float(noise_std),
             "seed": seed,
             "mean_distortion": float(np.mean(diff)),
