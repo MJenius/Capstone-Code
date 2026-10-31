@@ -7,6 +7,9 @@ study_comparison_metrics.json
 scratch/
 results/**/*.npy
 
+# Large binary ANN dataset arrays (can be regenerated with `python run.py --phase ann-data`)
+data/ann/**/*.npy
+
 # Image data (Datasets and generated artifacts)
 DIV2K.tar
 data/raw/

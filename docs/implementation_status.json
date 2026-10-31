@@ -7,13 +7,14 @@
       "utils/loader.py",
       "utils/processor.py",
       "utils/metadata_mgr.py",
-      "core/preprocessing.py"
+      "core/preprocessing.py",
+      "core/data_sources.py"
     ],
     "entry_point": "python run.py --phase preprocessing",
-    "input": "data/raw/div2k (PNG images)",
-    "output": "preprocessed/rgb_256, preprocessed/I_channel, preprocessed/metadata, results/phase1_preprocessing/",
-    "metrics": ["i_channel_min", "i_channel_max", "dimensions"],
-    "notes": "Downloads DIV2K, converts RGB/BGR to YIQ color space, extracts I-channel, and min-max normalizes to [0, 1]."
+    "input": "data/raw/div2k or preprocessed/I_channel (800 unique DIV2K hosts)",
+    "output": "preprocessed/rgb_256, preprocessed/I_channel, splits/host_level/, results/phase1_preprocessing/",
+    "metrics": ["i_channel_min", "i_channel_max", "dimensions", "unique_hosts=800"],
+    "notes": "Converts RGB/BGR to YIQ color space, extracts 256x256 I-channel, normalizes to [0, 1], and enforces leakage-free host-level train/val/test splits (560/120/120 unique hosts)."
   },
   {
     "component": "Dual-Security Watermark Transformations",
@@ -23,13 +24,14 @@
       "utils/scrambler.py",
       "utils/catalan.py",
       "utils/mosaic.py",
-      "core/watermark.py"
+      "core/watermark.py",
+      "core/keyed_permutation.py"
     ],
     "entry_point": "python run.py --phase watermark",
-    "input": "32x32 binary watermark (text: PW26_PAC_01 or file)",
+    "input": "32x32 binary watermark",
     "output": "data/scrambled, data/catalan, data/mosaic, results/phase2_watermark/",
-    "metrics": ["NC", "BER", "exact_match", "bit_errors"],
-    "notes": "Arnold Cat Map (10 iter) spatial scrambling + Catalan permutation (5 iter, key=7) using Blake2b hashed ordering + 8x8 mosaic expansion to 256x256 (64 repeated tiles). Exact mathematical reversibility validated (BER=0.0, NC=1.0)."
+    "metrics": ["NC=1.0000", "BER=0.0000", "exact_match=true", "bit_errors=0"],
+    "notes": "Arnold Cat Map (10 iter) spatial scrambling + Catalan permutation (5 iter, key=7) + 8x8 mosaic expansion to 256x256 (64 repeated tiles) with cached O(1) index bijection."
   },
   {
     "component": "Perceptual Texture-Adaptive Embedding",
@@ -37,13 +39,14 @@
     "files": [
       "utils/adaptive_embedder.py",
       "utils/baseline.py",
-      "core/embedding.py"
+      "core/embedding.py",
+      "core/hybrid_system.py"
     ],
     "entry_point": "python run.py --phase embedding",
     "input": "Host normalized I-channel (256x256) and 8x8 watermark mosaic (256x256)",
     "output": "preprocessed/embedded_I_channel, results/phase3_embedding/",
-    "metrics": ["PSNR (dB)", "SSIM", "alpha_min", "alpha_max", "alpha_mean"],
-    "notes": "Computes local variance texture mask: alpha_pixel = alpha_base * (1.0 + sensitivity * mask). Embeds centered watermark: embedded = host + alpha_pixel * (wm - 0.5). High imperceptibility achieved (PSNR > 41 dB, SSIM > 0.996)."
+    "metrics": ["PSNR=41.61 dB", "SSIM=0.9805", "alpha_min=0.012", "alpha_max=0.036"],
+    "notes": "Computes local variance texture mask: alpha_pixel = alpha_base * (1.0 + sensitivity * mask). Embeds centered watermark: embedded = host + alpha_pixel * (wm - 0.5)."
   },
   {
     "component": "Attack Engine Suite",
@@ -52,82 +55,73 @@
       "attacks/cropping.py",
       "attacks/signal.py",
       "attacks/collusion.py",
-      "core/attacks.py"
+      "core/attacks.py",
+      "core/hybrid_system.py"
     ],
     "entry_point": "python run.py --phase attacks --attack <crop|jpeg|noise|blur|collusion>",
     "input": "Watermarked 2D I-channel (256x256)",
     "output": "results/phase4_attacks/<attack_name>/",
-    "metrics": ["attack_intensity", "mask_area_kept", "crop_retained_pct", "quality_factor", "noise_sigma", "kernel_size", "colluders_N"],
-    "notes": "Standardized attack suite: Cropping (center, random, quadrant; 10%, 25%, 50%), Signal (JPEG Q=50/70, Gaussian Noise sigma=0.05, Gaussian Blur k=3), and Averaging Collusion (N=2, 5, 10, 20, 50, 100). Fully reproducible with deterministic seeds."
+    "metrics": ["crop_retained_pct", "quality_factor", "noise_sigma", "kernel_size", "colluders_N"],
+    "notes": "Cropping (10%, 25%, 50%), Signal (JPEG Q=50/70, Gaussian Noise sigma=0.05, Gaussian Blur k=3, Median k=3), and Multi-Watermark Averaging Collusion (N=2, 5, 10, 20, 50, 100)."
   },
   {
     "component": "Non-Blind Host-Subtracted Extraction",
     "status": "completed",
     "files": [
-      "benchmark.py",
       "core/extraction.py",
+      "core/hybrid_system.py",
       "core/evaluation.py"
     ],
     "entry_point": "python run.py --phase extraction",
-    "input": "Attacked I-channel, original host I-channel, attack crop mask (if cropped)",
+    "input": "Attacked I-channel, original host I-channel, attack crop mask",
     "output": "results/phase5_extraction/",
-    "metrics": ["NC", "BER", "bit_errors", "recovery_success"],
-    "notes": "Non-blind residual: diff = (attacked - host) / alpha_base + 0.5. Tiles 64 32x32 blocks with mask weighting, thresholds to binary, and applies inverse Catalan + inverse Arnold to recover original 32x32 watermark."
+    "metrics": ["NC=1.0000 (clean/crop)", "BER=0.0000 (clean/crop)"],
+    "notes": "Implements both exact pixel-wise alpha compensation (nonblind_pixel) and scalar alpha_base compensation (nonblind_base)."
   },
   {
-    "component": "Standardized Baseline Benchmarking Suite",
-    "status": "completed",
-    "files": [
-      "benchmark.py",
-      "summarise_results.py",
-      "plot_collusion_curve.py",
-      "plot_tradeoff.py",
-      "core/evaluation.py"
-    ],
-    "entry_point": "python run.py --phase benchmark",
-    "input": "165 DIV2K test images from splits/test.txt",
-    "output": "results/phase6_benchmark/, benchmarking_results.json, collusion_curve.json",
-    "metrics": ["PSNR", "SSIM", "NC_by_attack", "BER_by_attack", "Collusion_curve"],
-    "notes": "Evaluates 14 attack conditions across all 165 test images for both Hybrid Framework and Center-Tile Baseline. Verifies mosaic redundancy advantage under cropping (NC > 0.99 at 50% crop) and noise averaging."
-  },
-  {
-    "component": "Automated Validation & Unit Testing",
-    "status": "completed",
-    "files": [
-      "tests/test_components.py",
-      "tests/test_pipeline.py",
-      "verify.py"
-    ],
-    "entry_point": "python run.py --phase tests",
-    "input": "Synthetic and sample image arrays",
-    "output": "results/phase7_tests/test_report.json, results/phase7_tests/test_report.md",
-    "metrics": ["test_pass_count", "test_fail_count", "test_duration_s"],
-    "notes": "Pytest suite verifying component reversibility, embedder fidelity, attack reproducibility, pipeline roundtrip, cropping resilience, and benchmark smoke tests."
-  },
-  {
-    "component": "ANN Dataset Generation",
+    "component": "ANN Dataset Generation (Leakage-Free)",
     "status": "completed",
     "files": [
       "create_training_data.py",
-      "pipeline/phase8_ann_data.py"
+      "training/dataset.py",
+      "pipeline/ann_phases.py"
     ],
     "entry_point": "python run.py --phase ann-data",
-    "input": "Preprocessed I-channels (data/preprocessed)",
-    "output": "results/phase8_ann_data/, training_data/inputs, training_data/labels, metadata.csv",
-    "metrics": ["num_samples", "attack_distribution", "input_shape", "label_shape"],
-    "notes": "Generates (distorted I-channel, clean recovered watermark signal) training pairs for future neural network blind extractor training with attack metadata logging."
+    "input": "800 unique DIV2K host I-channels split into 560 train / 120 val / 120 test",
+    "output": "data/ann/{train,val,test}, data/ann/metadata.csv, data/ann/dataset_summary.json, data/ann/visualizations/",
+    "metrics": ["total_samples=2960", "train=2240", "val=360", "test=360", "host_overlap=0"],
+    "notes": "Generates (256x256 attacked I-channel -> 32x32 original binary watermark) supervised pairs across 2,781 distinct watermarks with zero host or watermark leakage."
   },
   {
-    "component": "ANN Blind Watermark Extractor",
-    "status": "planned",
+    "component": "ANN Blind Watermark Extractor & Training Pipeline",
+    "status": "completed",
     "files": [
-      "core/ann_interface.py",
-      "pipeline/phase9_ann.py"
+      "models/blind_extractor.py",
+      "training/trainer.py",
+      "training/losses.py",
+      "training/metrics.py",
+      "training/inference.py",
+      "training/evaluator.py",
+      "core/ann_interface.py"
     ],
-    "entry_point": "python run.py --phase ann-train (or python run.py --phase ann-eval)",
-    "input": "Attacked watermarked I-channel without host image (256x256)",
-    "output": "results/phase9_ann/ (Model checkpoints, blind extraction metrics)",
-    "metrics": ["Validation Loss", "Blind NC", "Blind BER"],
-    "notes": "PLANNED / REMAINING — The deep neural network for blind watermark extraction without original host image is not yet implemented. Structural interfaces and training harnesses are defined, but the neural model weights and architecture are pending future capstone work."
+    "entry_point": "python run.py --phase ann-train",
+    "input": "Attacked watermarked I-channel ONLY (B, 1, 256, 256) — no host, no mask",
+    "output": "models/checkpoints/best_model.pth, models/checkpoints/last_model.pth, results/ann_training/",
+    "metrics": ["params=276466", "best_val_nc=0.7333", "clean_test_nc=0.9569", "crop50_test_nc=0.9243", "CRR_50=0.9659", "CoRI_agg=0.7403"],
+    "notes": "Mosaic-aware residual CNN with high-pass conditioning, multi-scale context branch, learned softmax 8x8 tile confidence weighting, residual decoder, and persistent inverse Catalan+Arnold permutation buffer."
+  },
+  {
+    "component": "3-Way Evaluation, Visual Demo & Interactive Streamlit App",
+    "status": "completed",
+    "files": [
+      "pipeline/ann_phases.py",
+      "app.py",
+      "tests/test_ann_and_system.py"
+    ],
+    "entry_point": "python run.py --phase comparison && python run.py --phase demo && streamlit run app.py",
+    "input": "120 held-out test hosts and trained best_model.pth checkpoint",
+    "output": "results/final_evaluation/, results/final_demo/, results/ann_inference/, results/final_validation/",
+    "metrics": ["pytest_passed=26/26", "pass_rate=100%"],
+    "notes": "Full 3-way comparison across 16 attack conditions on 120 held-out test hosts, 16-panel visual pipeline poster, and 10-tab interactive Streamlit workbench."
   }
 ]

@@ -1,0 +1,30 @@
+{
+  "input": "results\\ann_inference\\demo_attacked_crop25.npy",
+  "mode": "BLIND (no host image, no crop mask, no ground truth during inference)",
+  "inference_seconds": 0.04472900000109803,
+  "mean_confidence": 0.9917955994606018,
+  "checkpoint": {
+    "checkpoint": "models\\checkpoints\\best_model.pth",
+    "epoch": 4,
+    "best_val_nc": 0.7332680384318034,
+    "model_config": {
+      "base_channels": 16,
+      "decoder_channels": 64,
+      "grid": 8,
+      "tile": 32,
+      "acm_iterations": 10,
+      "catalan_iterations": 5,
+      "catalan_key": 7,
+      "use_key_permutation": true
+    },
+    "saved_at": "2026-10-31T14:56:35"
+  },
+  "post_inference_evaluation": {
+    "nc": 1.0,
+    "ber": 0.0,
+    "accuracy": 1.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+  }
+}

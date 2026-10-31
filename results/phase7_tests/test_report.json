@@ -1,16 +1,16 @@
 {
   "title": "Phase 7 \u2014 Automated Test Report",
   "phase": "Phase 7",
-  "timestamp": "2026-10-01T12:38:48.466358",
+  "timestamp": "2026-10-31T15:09:23.690889",
   "exit_code": 0,
-  "summary": "Executed 20 automated tests with 20 passed, 0 failed, 0 skipped.",
+  "summary": "Executed 26 automated tests with 26 passed, 0 failed, 0 skipped.",
   "metrics": {
     "total_tests": {
-      "val": 20,
+      "val": 26,
       "desc": "Total executed test cases"
     },
     "passed": {
-      "val": 20,
+      "val": 26,
       "desc": "Passed test cases"
     },
     "failed": {
@@ -28,123 +28,159 @@
   },
   "test_details": [
     {
+      "nodeid": "tests/test_ann_and_system.py::test_synthetic_fixture_roundtrip_without_dataset",
+      "outcome": "passed",
+      "duration": 0.09621309999783989,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_ann_and_system.py::test_collusion_correctness_independent_watermarks",
+      "outcome": "passed",
+      "duration": 0.06679759999678936,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_ann_and_system.py::test_host_level_split_zero_leakage",
+      "outcome": "passed",
+      "duration": 0.00784370000474155,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_ann_and_system.py::test_ann_model_shapes_and_forward",
+      "outcome": "passed",
+      "duration": 0.17516139999497682,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_ann_and_system.py::test_ann_smoke_training_and_checkpoint_roundtrip",
+      "outcome": "passed",
+      "duration": 2.98522810000577,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_ann_and_system.py::test_streamlit_app_and_cli_imports",
+      "outcome": "passed",
+      "duration": 0.003043199991225265,
+      "error": null
+    },
+    {
       "nodeid": "tests/test_components.py::test_catalan_reversibility",
       "outcome": "passed",
-      "duration": 0.06937729999935982,
+      "duration": 0.09160820000397507,
       "error": null
     },
     {
       "nodeid": "tests/test_components.py::test_scrambler_reversibility",
       "outcome": "passed",
-      "duration": 0.009036299999934272,
+      "duration": 0.0024031000066315755,
       "error": null
     },
     {
       "nodeid": "tests/test_components.py::test_mosaic_generation",
       "outcome": "passed",
-      "duration": 0.0009056999997483217,
+      "duration": 0.0009408000041730702,
       "error": null
     },
     {
       "nodeid": "tests/test_components.py::test_adaptive_embedder_fidelity",
       "outcome": "passed",
-      "duration": 0.01370889999998326,
+      "duration": 0.018834599992260337,
       "error": null
     },
     {
       "nodeid": "tests/test_components.py::test_baseline_embedder_fidelity",
       "outcome": "passed",
-      "duration": 0.001463099999455153,
+      "duration": 0.0015373000060208142,
       "error": null
     },
     {
       "nodeid": "tests/test_components.py::test_cropping_attack_and_mask_reproducibility",
       "outcome": "passed",
-      "duration": 0.0017477999999755411,
+      "duration": 0.0021957999997539446,
       "error": null
     },
     {
       "nodeid": "tests/test_components.py::test_signal_attack_reproducibility",
       "outcome": "passed",
-      "duration": 0.005076000000372005,
+      "duration": 0.006668799993349239,
       "error": null
     },
     {
       "nodeid": "tests/test_components.py::test_collusion_attack_reproducibility",
       "outcome": "passed",
-      "duration": 0.005245199999990291,
+      "duration": 0.006857000000309199,
       "error": null
     },
     {
       "nodeid": "tests/test_components.py::test_nc_and_ber_metrics",
       "outcome": "passed",
-      "duration": 0.0009851000004346133,
+      "duration": 0.0009568999957991764,
       "error": null
     },
     {
       "nodeid": "tests/test_phases.py::test_config_loading",
       "outcome": "passed",
-      "duration": 0.0051720000001296285,
+      "duration": 0.007373100001132116,
       "error": null
     },
     {
       "nodeid": "tests/test_phases.py::test_phase0_environment",
       "outcome": "passed",
-      "duration": 0.10199660000034783,
+      "duration": 0.08708519999345299,
       "error": null
     },
     {
       "nodeid": "tests/test_phases.py::test_phase1_preprocessing",
       "outcome": "passed",
-      "duration": 1.9572451999993064,
+      "duration": 1.824028000002727,
       "error": null
     },
     {
       "nodeid": "tests/test_phases.py::test_phase2_watermark_reversibility",
       "outcome": "passed",
-      "duration": 0.8802882999998474,
+      "duration": 0.6223065999947721,
       "error": null
     },
     {
       "nodeid": "tests/test_phases.py::test_phase3_embedding_fidelity",
       "outcome": "passed",
-      "duration": 1.4925328999997873,
+      "duration": 1.099083499997505,
       "error": null
     },
     {
       "nodeid": "tests/test_phases.py::test_phase4_attacks_reproducibility",
       "outcome": "passed",
-      "duration": 1.2251332000005277,
+      "duration": 1.1161366000014823,
       "error": null
     },
     {
       "nodeid": "tests/test_phases.py::test_phase5_extraction",
       "outcome": "passed",
-      "duration": 1.052187799999956,
+      "duration": 1.0806951999984449,
       "error": null
     },
     {
       "nodeid": "tests/test_phases.py::test_demo_execution",
       "outcome": "passed",
-      "duration": 2.5726462000002357,
+      "duration": 8.476235800000723,
       "error": null
     },
     {
       "nodeid": "tests/test_pipeline.py::test_full_pipeline_roundtrip",
       "outcome": "passed",
-      "duration": 0.09792169999946054,
+      "duration": 0.04640320000180509,
       "error": null
     },
     {
       "nodeid": "tests/test_pipeline.py::test_mosaic_redundancy_under_cropping",
       "outcome": "passed",
-      "duration": 0.003111199999693781,
+      "duration": 0.0024514999968232587,
       "error": null
     },
     {
       "nodeid": "tests/test_pipeline.py::test_benchmark_smoke_test",
       "outcome": "passed",
-      "duration": 0.6706173000002309,
+      "duration": 0.4212781000096584,
       "error": null
     }
   ],

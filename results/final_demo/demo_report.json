@@ -1,0 +1,64 @@
+{
+  "title": "Complete Hybrid Watermarking Visual Pipeline Report",
+  "timestamp": "2026-10-31T15:09:22",
+  "host_id": "0014",
+  "host_split": "test (held-out)",
+  "attack": "crop",
+  "attack_label": "25% Random Crop (Kept 75.0%)",
+  "imperceptibility": {
+    "psnr_db": 43.418545139702644,
+    "ssim": 0.9683080161018371,
+    "alpha_min": 0.012000000104308128,
+    "alpha_max": 0.035999998450279236,
+    "alpha_mean": 0.013073306530714035
+  },
+  "blind_ann_extraction": {
+    "extractor_type": "BLIND (Attacked I-channel only; NO original host image or crop mask used)",
+    "checkpoint": {
+      "checkpoint": "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\models\\checkpoints\\best_model.pth",
+      "epoch": 4,
+      "best_val_nc": 0.7332680384318034,
+      "model_config": {
+        "base_channels": 16,
+        "decoder_channels": 64,
+        "grid": 8,
+        "tile": 32,
+        "acm_iterations": 10,
+        "catalan_iterations": 5,
+        "catalan_key": 7,
+        "use_key_permutation": true
+      },
+      "saved_at": "2026-10-31T14:56:35"
+    },
+    "inference_seconds": 0.039001099998131394,
+    "metrics": {
+      "nc": 1.0,
+      "ber": 0.0,
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "bit_errors": 0
+  },
+  "nonblind_extraction": {
+    "extractor_type": "NON-BLIND (Requires original unwatermarked host I-channel and crop mask)",
+    "metrics": {
+      "nc": 1.0,
+      "ber": 0.0,
+      "bit_errors": 0,
+      "total_bits": 1024,
+      "exact_match": true
+    }
+  },
+  "artifacts": [
+    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\final_demo\\full_pipeline.png",
+    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\final_demo\\stage_01_preprocessing.png",
+    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\final_demo\\stage_02_watermark.png",
+    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\final_demo\\stage_03_embedding.png",
+    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\final_demo\\stage_04_attack.png",
+    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\final_demo\\stage_05_nonblind_extraction.png",
+    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\final_demo\\stage_06_ann_blind_extraction.png",
+    "C:\\Users\\mjeni\\OneDrive\\Desktop\\Capstone\\Code\\results\\final_demo\\stage_07_comparison.png"
+  ]
+}

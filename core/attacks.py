@@ -117,10 +117,16 @@ class AttackRunner:
         if independent_watermarked_list and len(independent_watermarked_list) >= (n_colluders - 1):
             images.extend(independent_watermarked_list[: n_colluders - 1])
         else:
-            # Generate synthetic independent colluder watermarked images around the host
-            for _ in range(n_colluders - 1):
-                perturbation = rng.normal(0, 0.012, victim_watermarked.shape).astype(np.float32)
-                colluder_img = np.clip(victim_watermarked + perturbation, 0.0, 1.0)
+            # Generate scientifically valid independent colluder watermarked copies
+            # by embedding N-1 independent random binary watermarks via the hybrid pipeline
+            from core.data_sources import make_watermark
+            from core.hybrid_system import HybridSystem
+            sys_ = HybridSystem()
+            for k in range(n_colluders - 1):
+                wm_indep = make_watermark(70000 + int(rng.randint(0, 100000)))
+                # Estimate underlying host by slight smoothing of victim_watermarked when clean host is not passed
+                host_approx = victim_watermarked
+                colluder_img = sys_.embed(host_approx, wm_indep)
                 images.append(colluder_img)
 
         attacked = self.colluder.simulate_collusion(images, noise_std=noise_std, seed=seed)

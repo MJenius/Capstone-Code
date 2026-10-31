@@ -1,0 +1,15 @@
+{
+  "seed": 42,
+  "ratios": [
+    0.7,
+    0.15,
+    0.15
+  ],
+  "source": "div2k_preprocessed",
+  "counts": {
+    "train": 560,
+    "val": 120,
+    "test": 120
+  },
+  "note": "Split by unique host id (4-digit DIV2K prefix); duplicates collapsed."
+}

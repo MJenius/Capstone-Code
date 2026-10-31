@@ -1,21 +1,19 @@
 """
-Abstract interfaces and architecture specifications for the future Blind ANN Watermark Extractor.
+Interfaces and wrapper for the Blind ANN Watermark Extractor.
 
-STATUS: PLANNED / IN PROGRESS
-The deep neural network for blind watermark extraction without original host images
-is NOT yet implemented in this repository.
-
-This module establishes the exact model input/output contract, hyperparameter configuration,
-and base classes for seamless future integration.
+STATUS: IMPLEMENTED & TRAINABLE (PyTorch)
+Provides BaseANNWatermarkExtractor contract and ConcreteBlindANNExtractor
+wrapping models.blind_extractor.BlindWatermarkExtractor and training.inference.BlindExtractor.
 """
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional, Tuple
+from pathlib import Path
+from typing import Any, Dict, Optional
 import numpy as np
 
 
 class BaseANNWatermarkExtractor(ABC):
     """
-    Abstract Base Class for future Deep Learning Blind Watermark Extractors.
+    Abstract Base Class for Deep Learning Blind Watermark Extractors.
     
     Contract:
     - Input: Attacked / Watermarked Image or I-Channel of shape (B, 1, 256, 256)
@@ -23,7 +21,7 @@ class BaseANNWatermarkExtractor(ABC):
     - Output: Predicted watermark array of shape (B, 1, 32, 32) in range [0, 1].
     """
 
-    def __init__(self, model_name: str = "BlindExtractorPlaceholder"):
+    def __init__(self, model_name: str = "BlindWatermarkExtractor"):
         self.model_name = model_name
         self.is_trained = False
 
@@ -52,41 +50,92 @@ class BaseANNWatermarkExtractor(ABC):
         pass
 
 
-class PlannedANNModelPlaceholder(BaseANNWatermarkExtractor):
+class ConcreteBlindANNExtractor(BaseANNWatermarkExtractor):
     """
-    Concrete placeholder representing the unbuilt ANN Extractor.
-    Ensures that calling unbuilt ANN phases raises clear, honest status messages.
+    Production PyTorch Blind ANN Watermark Extractor fulfilling BaseANNWatermarkExtractor.
     """
 
-    def __init__(self):
-        super().__init__(model_name="PlannedANNModelPlaceholder")
+    def __init__(self, checkpoint_path: Optional[str] = None, device: str = "auto"):
+        super().__init__(model_name="BlindWatermarkExtractor")
+        import torch
+        from models.blind_extractor import build_model
+        from training.trainer import get_device, load_checkpoint, save_checkpoint, CKPT_DIR
+
+        self.device = get_device(device)
+        self._save_fn = save_checkpoint
+        self._load_fn = load_checkpoint
+        default_ckpt = CKPT_DIR / "best_model.pth"
+        ckpt_to_use = Path(checkpoint_path) if checkpoint_path else default_ckpt
+        if ckpt_to_use.exists():
+            self.model, self.ckpt_meta = load_checkpoint(ckpt_to_use, self.device)
+            self.is_trained = True
+            self.checkpoint_path = str(ckpt_to_use)
+        else:
+            self.model = build_model().to(self.device)
+            self.model.eval()
+            self.ckpt_meta = {}
+            self.is_trained = False
+            self.checkpoint_path = None
 
     def forward(self, input_tensor: Any) -> Any:
-        raise NotImplementedError(
-            "PLANNED — ANN blind extractor architecture is not yet implemented. "
-            "Please train the model once the network weights and architecture are constructed."
-        )
+        import torch
+        if not isinstance(input_tensor, torch.Tensor):
+            input_tensor = torch.as_tensor(input_tensor, dtype=torch.float32, device=self.device)
+        if input_tensor.ndim == 2:
+            input_tensor = input_tensor[None, None]
+        elif input_tensor.ndim == 3:
+            input_tensor = input_tensor[:, None]
+        return torch.sigmoid(self.model(input_tensor.to(self.device)))
 
-    def extract_blind(self, watermarked_channel: np.ndarray) -> np.ndarray:
-        raise NotImplementedError(
-            "PLANNED — Blind ANN extraction requires trained neural network weights. "
-            "Currently only Non-Blind (Host-Subtracted) extraction is implemented."
-        )
+    def extract_blind(self, watermarked_channel: np.ndarray, threshold: float = 0.5) -> Dict[str, Any]:
+        import torch
+        from training.inference import image_to_i_channel
+        i_chan = image_to_i_channel(watermarked_channel)
+        with torch.no_grad():
+            x = torch.from_numpy(i_chan.astype(np.float32))[None, None].to(self.device)
+            prob = torch.sigmoid(self.model(x)).cpu().numpy()[0, 0]
+        binary = (prob > threshold).astype(np.uint8)
+        return {
+            "probability": prob,
+            "binary": binary,
+            "input_i_channel": i_chan,
+            "is_trained": self.is_trained,
+            "checkpoint": self.checkpoint_path,
+        }
 
     def save_checkpoint(self, path: str) -> None:
-        raise NotImplementedError("PLANNED — Checkpoint saving pending model implementation.")
+        self._save_fn(Path(path), self.model)
 
     def load_checkpoint(self, path: str) -> None:
-        raise NotImplementedError("PLANNED — Checkpoint loading pending model implementation.")
+        self.model, self.ckpt_meta = self._load_fn(Path(path), self.device)
+        self.is_trained = True
+        self.checkpoint_path = str(path)
+
+
+# Backwards-compatible alias for any external scripts importing PlannedANNModelPlaceholder
+PlannedANNModelPlaceholder = ConcreteBlindANNExtractor
 
 
 def get_ann_model_info() -> Dict[str, Any]:
     """Return implementation status and architecture metadata for reports."""
-    return {
-        "status": "PLANNED",
-        "description": "Blind Deep Neural Network Watermark Extractor (Host-Free)",
+    from models.blind_extractor import build_model, count_parameters
+    from training.trainer import CKPT_DIR
+    best_ckpt = CKPT_DIR / "best_model.pth"
+    m = build_model()
+    info = {
+        "status": "TRAINED" if best_ckpt.exists() else "IMPLEMENTED (UNTRAINED)",
+        "model_class": "BlindWatermarkExtractor",
+        "description": "Mosaic-Aware Multi-Scale Residual CNN Blind Watermark Extractor (Host-Free)",
         "input_shape": [1, 256, 256],
         "output_shape": [1, 32, 32],
-        "loss_function": "BCE / MSE Hybrid",
-        "notes": "Pending Phase 3 research implementation. Training pairs are generated by Phase 8."
+        "trainable_parameters": count_parameters(m),
+        "loss_function": "BCEWithLogitsLoss + 0.1 * (1 - soft_NC)",
+        "checkpoint_path": str(best_ckpt) if best_ckpt.exists() else None,
     }
+    if best_ckpt.exists():
+        import torch
+        ck = torch.load(best_ckpt, map_location="cpu", weights_only=False)
+        info["epoch"] = ck.get("epoch")
+        info["best_val_nc"] = ck.get("best_metric")
+        info["saved_at"] = ck.get("saved_at")
+    return info

@@ -1,0 +1,187 @@
+{
+  "title": "Final System Validation — Automated Test Report",
+  "phase": "Final Validation",
+  "timestamp": "2026-10-31T15:09:23.690889",
+  "exit_code": 0,
+  "summary": "Executed 26 automated tests across unit, integration, ANN blind extractor, and CLI/Streamlit pipeline suites with 26 passed, 0 failed, 0 skipped.",
+  "metrics": {
+    "total_tests": {
+      "val": 26,
+      "desc": "Total executed test cases"
+    },
+    "passed": {
+      "val": 26,
+      "desc": "Passed test cases"
+    },
+    "failed": {
+      "val": 0,
+      "desc": "Failed test cases"
+    },
+    "skipped": {
+      "val": 0,
+      "desc": "Skipped test cases"
+    },
+    "pass_rate_pct": {
+      "val": 100.0,
+      "desc": "Test pass rate (NOT code coverage)"
+    }
+  },
+  "test_details": [
+    {
+      "nodeid": "tests/test_ann_and_system.py::test_synthetic_fixture_roundtrip_without_dataset",
+      "outcome": "passed",
+      "duration": 0.096213,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_ann_and_system.py::test_collusion_correctness_independent_watermarks",
+      "outcome": "passed",
+      "duration": 0.066798,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_ann_and_system.py::test_host_level_split_zero_leakage",
+      "outcome": "passed",
+      "duration": 0.007844,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_ann_and_system.py::test_ann_model_shapes_and_forward",
+      "outcome": "passed",
+      "duration": 0.175161,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_ann_and_system.py::test_ann_smoke_training_and_checkpoint_roundtrip",
+      "outcome": "passed",
+      "duration": 2.985228,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_ann_and_system.py::test_streamlit_app_and_cli_imports",
+      "outcome": "passed",
+      "duration": 0.003043,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_components.py::test_catalan_reversibility",
+      "outcome": "passed",
+      "duration": 0.091608,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_components.py::test_scrambler_reversibility",
+      "outcome": "passed",
+      "duration": 0.002403,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_components.py::test_mosaic_generation",
+      "outcome": "passed",
+      "duration": 0.000941,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_components.py::test_adaptive_embedder_fidelity",
+      "outcome": "passed",
+      "duration": 0.018835,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_components.py::test_baseline_embedder_fidelity",
+      "outcome": "passed",
+      "duration": 0.001537,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_components.py::test_cropping_attack_and_mask_reproducibility",
+      "outcome": "passed",
+      "duration": 0.002196,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_components.py::test_signal_attack_reproducibility",
+      "outcome": "passed",
+      "duration": 0.006669,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_components.py::test_collusion_attack_reproducibility",
+      "outcome": "passed",
+      "duration": 0.006857,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_components.py::test_nc_and_ber_metrics",
+      "outcome": "passed",
+      "duration": 0.000957,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_phases.py::test_config_loading",
+      "outcome": "passed",
+      "duration": 0.007373,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_phases.py::test_phase0_environment",
+      "outcome": "passed",
+      "duration": 0.087085,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_phases.py::test_phase1_preprocessing",
+      "outcome": "passed",
+      "duration": 1.824028,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_phases.py::test_phase2_watermark_reversibility",
+      "outcome": "passed",
+      "duration": 0.622307,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_phases.py::test_phase3_embedding_fidelity",
+      "outcome": "passed",
+      "duration": 1.099083,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_phases.py::test_phase4_attacks_reproducibility",
+      "outcome": "passed",
+      "duration": 1.116137,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_phases.py::test_phase5_extraction",
+      "outcome": "passed",
+      "duration": 1.080695,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_phases.py::test_demo_execution",
+      "outcome": "passed",
+      "duration": 8.476236,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_pipeline.py::test_full_pipeline_roundtrip",
+      "outcome": "passed",
+      "duration": 0.046403,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_pipeline.py::test_mosaic_redundancy_under_cropping",
+      "outcome": "passed",
+      "duration": 0.002451,
+      "error": null
+    },
+    {
+      "nodeid": "tests/test_pipeline.py::test_benchmark_smoke_test",
+      "outcome": "passed",
+      "duration": 0.421278,
+      "error": null
+    }
+  ]
+}

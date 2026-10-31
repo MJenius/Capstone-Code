@@ -1,75 +1,30 @@
-import os
-import numpy as np
-from pathlib import Path
-from tqdm import tqdm
-import logging
-import random
+"""
+Phase-3 / Final ANN Training Dataset Generator (`create_training_data.py`).
 
-from utils.adaptive_embedder import AdaptiveEmbedder
-from attacks.cropping import CroppingAttack
-from attacks.signal import SignalAttack
+Generates leakage-free (input, label) pairs in `data/ann/{train,val,test}`:
+- Input:  Attacked watermarked I-channel (256x256)
+- Label:  Original 32x32 binary watermark (32x32)
+- Splits: Strict host-level separation across 800 unique DIV2K hosts (560 train / 120 val / 120 test)
+          with disjoint watermark ID ranges per split.
+"""
+import argparse
+from pipeline.ann_phases import phase_ann_data
 
-def create_dataset():
-    base_dir = Path.cwd()
-    host_dir = base_dir / 'preprocessed' / 'I_channel'
-    output_dir = base_dir / 'training_data'
-    os.makedirs(output_dir / 'inputs', exist_ok=True)
-    os.makedirs(output_dir / 'labels', exist_ok=True)
-    
-    # Load Catalan Watermark (Ground Truth for labels)
-    catalan_dir = base_dir / 'data' / 'catalan'
-    catalan_wms = sorted(list(catalan_dir.glob('*.npy')))
-    if not catalan_wms:
-        print("No Catalan watermarks found")
-        return
-    wm_catalan = np.load(catalan_wms[0])
-    # Create mosaic (8x8 tiling of 32x32)
-    wm_mosaic = np.tile(wm_catalan, (8, 8))
-    
-    # Engines
-    embedder = AdaptiveEmbedder(alpha_base=0.03, sensitivity=2.0)
-    cropper = CroppingAttack()
-    signaller = SignalAttack()
-    
-    # Set deterministic random seeds
-    random.seed(42)
-    np.random.seed(42)
 
-    host_files = sorted(list(host_dir.glob('*.npy')))
-    print(f"Generating training data for {len(host_files)} host images...")
+def create_dataset(quick: bool = False, samples_per_host: int = 4, max_hosts: int = None, host_dir: str = None):
+    return phase_ann_data(quick=quick, samples_per_host=samples_per_host, max_hosts=max_hosts, host_dir=host_dir)
 
-    
-    for h_path in tqdm(host_files):
-        img_id = h_path.stem
-        host = np.load(h_path)
-        
-        # 1. Embed (Adaptive)
-        watermarked = embedder.embed(host, wm_mosaic)
-        
-        # 2. Compute the CLEAN recovered signal as the label.
-        # The label is the non-blind extracted watermark *before* any attack,
-        # i.e. the ground-truth signal an ANN should learn to recover.
-        # Using the mean alpha used by the embedder (alpha_base=0.03).
-        alpha_base = 0.03
-        clean_diff = (watermarked - host) / alpha_base + 0.5   # shape: (256, 256), values ~[0, 1]
-        label_signal = np.clip(clean_diff, 0.0, 1.0)
-
-        # 3. Random Attack Chain
-        distorted = watermarked.copy()
-        
-        # Step A: Geometric (Crop) - 50% chance
-        if random.random() < 0.5:
-            intensity = random.uniform(0.1, 0.4)
-            distorted = cropper.apply_attack(distorted, mode='random', intensity=intensity)
-            
-        # Step B: Signal (JPEG/Noise/Blur)
-        distorted = signaller.apply_random_signal_attack(distorted)
-        
-        # 4. Save Pairs
-        # Input:  Distorted I-Channel (256x256) — what the network sees
-        # Label:  Clean recovered watermark signal (256x256) — what it should produce
-        np.save(output_dir / 'inputs' / f"{img_id}.npy", distorted)
-        np.save(output_dir / 'labels' / f"{img_id}.npy", label_signal)
 
 if __name__ == "__main__":
-    create_dataset()
+    parser = argparse.ArgumentParser(description="Generate leakage-free ANN training/validation/test dataset")
+    parser.add_argument("--quick", action="store_true", help="Generate quick subset dataset")
+    parser.add_argument("--samples-per-host", type=int, default=4, help="Samples per training host (default: 4)")
+    parser.add_argument("--max-hosts", type=int, default=None, help="Optional cap on hosts per split")
+    parser.add_argument("--host-dir", type=str, default=None, help="Optional custom host image directory")
+    args = parser.parse_args()
+    create_dataset(
+        quick=args.quick,
+        samples_per_host=args.samples_per_host,
+        max_hosts=args.max_hosts,
+        host_dir=args.host_dir,
+    )
