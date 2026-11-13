@@ -1,7 +1,7 @@
 {
   "title": "Phase 3 \u2014 Perceptual Adaptive Embedding Report",
   "phase": "Phase 3",
-  "timestamp": "2026-10-31T17:26:44.845439",
+  "timestamp": "2026-11-13T19:06:26.366738",
   "summary": "Perceptual luminance-texture adaptive embedding performed into the I-channel.",
   "mathematical_model": {
     "formula": "alpha_pixel = alpha_base * (1.0 + sensitivity * mask); embedded = host + alpha_pixel * (wm - 0.5)",

@@ -1,6 +1,6 @@
 # Complete Hybrid Watermarking Pipeline — Visual Demonstration Report
 
-**Executed:** `2026-10-31T17:27:01`  
+**Executed:** `2026-11-13T19:06:45`  
 **Held-Out Test Host:** `0014` (never seen during ANN training/validation)  
 **Attack Applied:** `25% Random Crop (Kept 75.0%)`
 

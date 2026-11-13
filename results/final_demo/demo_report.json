@@ -1,6 +1,6 @@
 {
   "title": "Complete Hybrid Watermarking Visual Pipeline Report",
-  "timestamp": "2026-10-31T17:27:01",
+  "timestamp": "2026-11-13T19:06:45",
   "host_id": "0014",
   "host_split": "test (held-out)",
   "attack": "crop",
@@ -30,7 +30,7 @@
       },
       "saved_at": "2026-10-31T17:12:10"
     },
-    "inference_seconds": 0.03974729999026749,
+    "inference_seconds": 0.04201130000001285,
     "metrics": {
       "nc": 1.0,
       "ber": 0.0,

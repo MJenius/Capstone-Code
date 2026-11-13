@@ -23,7 +23,7 @@ A comprehensive technical audit, training improvement, and verification pass was
   - **RGB PNG Round-Trip:** Blind ANN **`NC = 0.969 ± 0.070`** (`BER = 0.0137`, outperforming non-blind `0.960`)
   - **3×3 Gaussian Blur:** Blind ANN **`NC = 0.718 ± 0.079`** (outperforming non-blind `0.392`)
 - **Interactive Streamlit Workbench:** All 10 tabs, custom file upload, attack simulator, blind inference, non-blind extraction, and live pipeline demo were verified via `streamlit.testing.v1.AppTest` and live HTTP health check (`200 OK`).
-- **Path Portability:** All local Windows user directories (`Users\mjeni`) in generated JSON, CSV, and markdown reports were converted to portable POSIX relative paths.
+- **Path Portability:** All local Windows user directories (e.g., `Users/<user>`) in generated JSON, CSV, and markdown reports were converted to portable POSIX relative paths.
 
 ---
 
