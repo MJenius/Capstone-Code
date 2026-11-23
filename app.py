@@ -52,7 +52,10 @@ st.set_page_config(
 def _arr_to_png_bytes(arr: np.ndarray, is_bgr: bool = False, scale_nearest: Optional[int] = None) -> bytes:
     a = np.asarray(arr)
     if a.ndim == 2:
-        if a.dtype != np.uint8:
+        if a.dtype == np.uint8 and a.size and a.max() <= 1:
+            # Binary watermarks use uint8 values 0/1; PNG needs 0/255.
+            a = a * 255
+        elif a.dtype != np.uint8:
             a = (np.clip(a, 0.0, 1.0) * 255.0).astype(np.uint8)
         if scale_nearest:
             a = cv2.resize(a, (scale_nearest, scale_nearest), interpolation=cv2.INTER_NEAREST)
@@ -604,7 +607,10 @@ with tabs[9]:
     )
     run_complete_clicked = dcol3.button("▶ RUN COMPLETE DEMO", type="primary", use_container_width=True)
 
-    if run_complete_clicked or "last_complete_demo" not in st.session_state:
+    demo_signature = (host_label, wm_id_val, acm_iters, cat_iters, int(cat_key),
+                      alpha_base, sensitivity, demo_attack_choice)
+    if (run_complete_clicked or "last_complete_demo" not in st.session_state
+            or st.session_state.get("last_demo_signature") != demo_signature):
         prog = st.progress(0.0, text="Stage 1/6: Preprocessing host image...")
         t_start = time.perf_counter()
 
@@ -689,6 +695,7 @@ with tabs[9]:
             "blind_metrics": blind_m_demo,
             "total_dt": total_dt,
         }
+        st.session_state["last_demo_signature"] = demo_signature
 
     dstate = st.session_state["last_complete_demo"]
     use_blind = "Blind ANN" in demo_extractor_mode and dstate["blind_bin"] is not None
@@ -743,10 +750,8 @@ with tabs[9]:
     }, indent=2).encode("utf-8")
     dl4.download_button("⬇ Full Results Report (JSON)", demo_json_bytes, "demo_results_report.json", "application/json")
 
-    poster_p = BASE_DIR / "results" / "final_demo" / "full_pipeline.png"
-    if poster_p.exists():
-        with st.expander("View Generated 16-Panel Publication Overview (`results/final_demo/full_pipeline.png`)", expanded=False):
-            st.image(str(poster_p), use_container_width=True)
+    # The pre-generated publication poster may use a different host, attack,
+    # or checkpoint. Showing it here would misrepresent the active demo.
 
 with st.expander("📋 Execution Logs", expanded=False):
     st.text("\n".join(st.session_state["exec_logs"][-30:]) or "No stage actions logged yet.")
